@@ -1,1 +1,283 @@
-<!doctype html><title>balling</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js; style-src 'unsafe-inline'; img-src data: blob:; frame-src 'self' data: blob:; connect-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Still balling — Three.js sculpture</title>
+<style>
+:root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif;background:#000;color:#fff}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:360px}
+header{display:flex;align-items:flex-end;justify-content:space-between;padding:30px 38px 0;gap:20px;z-index:1}
+h1{margin:0;font-family:Impact,'Arial Black',sans-serif;font-size:clamp(29px,4.6vw,57px);font-weight:400;line-height:1;letter-spacing:.025em}
+.label,.hint,.readout{font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.6;letter-spacing:.12em;text-transform:uppercase;color:#8c929c}.label{text-align:right;max-width:220px}.label strong{font-weight:400;color:#fff}
+main{position:relative;min-height:0;isolation:isolate}iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;touch-action:none}
+#status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:320px;text-align:center;color:#aab0ba;font-size:13px;line-height:1.7;pointer-events:none}#status.ready{display:none}#status.error{color:#fff}
+footer{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 38px 28px;z-index:1}.hint{letter-spacing:.04em}.controls{display:flex;gap:7px}button{appearance:none;background:#111216;color:#fff;border:1px solid #292c31;border-radius:5px;font:12px Arial,Helvetica,sans-serif;min-height:40px;padding:0 16px;cursor:pointer;white-space:nowrap}button:hover{background:#1e2127;border-color:#6e7582}button:focus-visible{outline:2px solid #CEDEFF;outline-offset:4px}button:disabled{opacity:.35;cursor:wait}#save{background:#fff;border-color:#fff;color:#000}#save:hover{background:#CEDEFF;border-color:#CEDEFF}.readout{margin-top:3px;font-size:9px;color:#626974}
+@media(max-width:600px){header{padding:24px 21px 0;align-items:center}.label{font-size:8px;max-width:105px}footer{padding:0 20px 22px;flex-direction:column;gap:14px}.hint{text-align:center;font-size:9px}.controls{width:100%;justify-content:center}button{flex:1;max-width:150px;padding:0 12px}.readout{display:none}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header><h1>STILL BALLING.</h1><div class="label"><strong>The original silhouette.</strong><br>An extra dimension.</div></header>
+<main aria-label="Interactive metallic sculpture">
+<iframe id="stage" title="Three-dimensional interpretation of your ASCII drawing" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+<div id="status" role="status" aria-live="polite">Building your silhouette in 3D…</div>
+</main>
+<footer><div class="hint">Drag to rotate · Scroll to zoom<div class="readout">Three.js · Real geometry · No models or textures downloaded</div></div><div class="controls"><button id="spin" type="button" disabled aria-pressed="true">Pause rotation</button><button id="reset" type="button" disabled>Reset view</button><button id="save" type="button" disabled>Save PNG ↗</button></div></footer>
+<template id="scene-source">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}</style>
+<pre id="ascii" hidden>
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣿⣿⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⡿⠛⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣀⠀⠀⠀⣼⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⣿⣷⣆⣴⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⡿⠋⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣿⣿⡟⠁⠀⠀⠹⣿⣿⣿⣿⣿⣿⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⠟⠁⠀⠀⠀⢀⣠⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⡇⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠒⠯⠟⡿⠛⠧⠀⠀⠀⢠⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣴⣿⣿⣿⣿⣿⡿⠟⠋⠁⠸⣿⣿⣿⡁⠀⠀⠉⠛⠿⢿⣿⣿⣿⣿⣿⣿⣷⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣾⣿⣿⣿⣿⣿⠟⠋⠁⠀⠀⠀⠀⠀⠀⠘⣿⣣⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⢿⣿⣿⣿⣷⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⡿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣿⣧⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⢿⣿⣿⣿⣿⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⣠⣴⣿⣿⣿⡿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠛⢿⣿⣿⣿⣦⣤⣔⠁⠀⣀⣤⡄
+⠀⠀⢀⣀⣰⣾⣿⣿⠟⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣿⡿⠋⠀
+⢸⣿⣿⣿⣿⣿⠟⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢻⣿⡿⠛⠉⠀⠀⠀
+⠀⠙⠛⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀
+</pre>
+<script type="module">
+const send = (type, data = {}) => parent.postMessage({type, ...data}, '*');
+let fatalErrors = 0, animationFrame = 0;
+const reportError = error => { if(fatalErrors)return; fatalErrors++; cancelAnimationFrame(animationFrame); send('balling-error', {message: String(error?.message || error).slice(0, 200)}); };
+addEventListener('error', event => reportError(event.error || event.message));
+addEventListener('unhandledrejection', event => reportError(event.reason));
+try {
+  const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js');
+  if(fatalErrors)throw new Error('Scene stopped after a fatal error.');
+  const rows = document.querySelector('#ascii').textContent.trim().split(/\r?\n/);
+  const W = Math.max(...rows.map(row => row.length)) * 2, H = rows.length * 4;
+  const mask = new Uint8Array(W * H);
+  const dots = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[0,3],[1,3]];
+  for (let row = 0; row < rows.length; row++) {
+    for (let col = 0; col < rows[row].length; col++) {
+      const bits = rows[row].charCodeAt(col) - 0x2800;
+      if (bits < 0 || bits > 255) throw new Error('Unsupported source character.');
+      for (let bit = 0; bit < 8; bit++) if (bits & (1 << bit)) mask[(row * 4 + dots[bit][1]) * W + col * 2 + dots[bit][0]] = 1;
+    }
+  }
+  // Trace the occupied braille cells, keeping disconnected details and holes.
+  const edges = [], starts = new Map();
+  const key = (x, y) => y * (W + 1) + x;
+  const occupied = (x, y) => x >= 0 && y >= 0 && x < W && y < H && mask[y * W + x] === 1;
+  const edge = (ax, ay, bx, by) => {
+    const id = edges.length;
+    edges.push({a:[ax,ay], b:[bx,by], used:false});
+    const k = key(ax,ay);
+    if (!starts.has(k)) starts.set(k, []);
+    starts.get(k).push(id);
+  };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (occupied(x,y)) {
+    if (!occupied(x,y-1)) edge(x,y,x+1,y);
+    if (!occupied(x+1,y)) edge(x+1,y,x+1,y+1);
+    if (!occupied(x,y+1)) edge(x+1,y+1,x,y+1);
+    if (!occupied(x-1,y)) edge(x,y+1,x,y);
+  }
+  const loops = [];
+  for (let first = 0; first < edges.length; first++) {
+    if (edges[first].used) continue;
+    const points = []; let current = first, closed = false;
+    for (let limit = 0; limit <= edges.length; limit++) {
+      const e = edges[current]; e.used = true; points.push(e.a);
+      if (e.b[0] === edges[first].a[0] && e.b[1] === edges[first].a[1]) { closed = true; break; }
+      const next = (starts.get(key(...e.b)) || []).filter(id => !edges[id].used);
+      if (!next.length) break;
+      const dx = e.b[0]-e.a[0], dy = e.b[1]-e.a[1];
+      const turn = id => { const n=edges[id], nx=n.b[0]-n.a[0], ny=n.b[1]-n.a[1]; return (Math.atan2(dx*ny-dy*nx,dx*nx+dy*ny)+Math.PI*2)%(Math.PI*2); };
+      next.sort((a,b) => turn(a)-turn(b)); current = next[0];
+    }
+    if (!closed) throw new Error('A source contour did not close.');
+    const reduced = points.filter((p,i) => {const a=points[(i+points.length-1)%points.length],b=points[(i+1)%points.length];return (p[0]-a[0])*(b[1]-p[1]) !== (p[1]-a[1])*(b[0]-p[0]);});
+    if (reduced.length >= 3) loops.push(reduced.map(([x,y]) => new THREE.Vector2((x-W/2)*.09,(H/2-y)*.065)));
+  }
+  const shapes = [], holes = [];
+  for (const loop of loops) {
+    if (THREE.ShapeUtils.isClockWise(loop)) shapes.push(new THREE.Shape(loop)); else holes.push(loop);
+  }
+  const contains = (polygon, p) => {
+    let inside = false;
+    for (let i=0,j=polygon.length-1;i<polygon.length;j=i++) {
+      const a=polygon[i],b=polygon[j];
+      if ((a.y>p.y)!==(b.y>p.y) && p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x) inside=!inside;
+    }
+    return inside;
+  };
+  for (const hole of holes) {
+    const candidates=shapes.filter(shape => contains(shape.getPoints(),hole[0]));
+    candidates.sort((a,b) => Math.abs(THREE.ShapeUtils.area(a.getPoints()))-Math.abs(THREE.ShapeUtils.area(b.getPoints())));
+    if (candidates[0]) candidates[0].holes.push(new THREE.Path(hole));
+  }
+  if (!shapes.length) throw new Error('The original silhouette is empty.');
+  const geometry = new THREE.ExtrudeGeometry(shapes,{depth:.68,bevelEnabled:true,bevelSegments:4,steps:1,bevelSize:.026,bevelThickness:.12,curveSegments:4});
+  geometry.computeBoundingBox();
+  const sourceCenter=geometry.boundingBox.getCenter(new THREE.Vector3());
+  geometry.center(); geometry.computeBoundingBox(); geometry.computeBoundingSphere();
+  const positions=geometry.attributes.position, uv=new Float32Array(positions.count*2);
+  for(let i=0;i<positions.count;i++){
+    uv[i*2]=(positions.getX(i)+sourceCenter.x)/(W*.09)+.5;
+    uv[i*2+1]=(positions.getY(i)+sourceCenter.y)/(H*.065)+.5;
+  }
+  geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  // Distance-to-edge gives the original flat mark a softly sculpted face.
+  const distance=new Float32Array(W*H);
+  for(let i=0;i<distance.length;i++)distance[i]=mask[i]?10000:0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(mask[y*W+x]){
+    const i=y*W+x;
+    distance[i]=Math.min(distance[i],x?distance[i-1]+1:1,y?distance[i-W]+1:1,x&&y?distance[i-W-1]+1.414:1,y&&x<W-1?distance[i-W+1]+1.414:1);
+  }
+  for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--)if(mask[y*W+x]){
+    const i=y*W+x;
+    distance[i]=Math.min(distance[i],x<W-1?distance[i+1]+1:1,y<H-1?distance[i+W]+1:1,x<W-1&&y<H-1?distance[i+W+1]+1.414:1,x&&y<H-1?distance[i+W-1]+1.414:1);
+  }
+  const relief=document.createElement('canvas');relief.width=W;relief.height=H;
+  const reliefContext=relief.getContext('2d'),pixels=reliefContext.createImageData(W,H);
+  for(let i=0;i<distance.length;i++){
+    const value=Math.round(255*(1-Math.exp(-distance[i]*.26)));
+    pixels.data[i*4]=pixels.data[i*4+1]=pixels.data[i*4+2]=value;pixels.data[i*4+3]=255;
+  }
+  reliefContext.putImageData(pixels,0,0);
+  const bump=new THREE.CanvasTexture(relief);bump.generateMipmaps=false;bump.minFilter=THREE.LinearFilter;bump.magFilter=THREE.LinearFilter;
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
+  const renderer = new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'low-power'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+  document.body.appendChild(renderer.domElement);
+  renderer.domElement.setAttribute('aria-label','Drag to rotate the metallic sculpture');
+  renderer.domElement.addEventListener('webglcontextlost', event => {event.preventDefault();reportError(new Error('WebGL context lost. Reload this page.'));});
+  // A procedural studio: no external textures, models, or HDRI downloads.
+  const studio = document.createElement('canvas'); studio.width=1024; studio.height=512;
+  const ctx=studio.getContext('2d'); ctx.fillStyle='#111216'; ctx.fillRect(0,0,1024,512);
+  const panel=(x,y,w,h,color) => {ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
+  panel(105,40,135,420,'#FFFFFF');panel(425,100,245,75,'#BFD6FF');panel(775,20,90,470,'#FFFFFF');panel(955,190,69,120,'#628CD4');
+  const environment = new THREE.CanvasTexture(studio); environment.mapping=THREE.EquirectangularReflectionMapping; environment.colorSpace=THREE.SRGBColorSpace;
+  const pmrem = new THREE.PMREMGenerator(renderer), envTarget=pmrem.fromEquirectangular(environment);
+  scene.environment=envTarget.texture;scene.environmentIntensity=1.8;environment.dispose();pmrem.dispose();
+  const material=new THREE.MeshPhysicalMaterial({color:0xc8cdd6,metalness:1,roughness:.23,clearcoat:.6,clearcoatRoughness:.16,bumpMap:bump,bumpScale:.8});
+  const edgeMaterial=new THREE.MeshPhysicalMaterial({color:0x8993a4,metalness:.95,roughness:.27});
+  const sculpture=new THREE.Mesh(geometry,[material,edgeMaterial]);sculpture.name='Original ASCII silhouette';scene.add(sculpture);
+  const keyLight=new THREE.DirectionalLight(0xffffff,3.5);keyLight.position.set(-4,7,8);scene.add(keyLight);
+  const rim=new THREE.DirectionalLight(0xcedeFF,2.8);rim.position.set(6,2,-4);scene.add(rim);
+  const fill=new THREE.DirectionalLight(0xffffff,1.2);fill.position.set(1,-3,6);scene.add(fill);
+  const camera=new THREE.OrthographicCamera(-8,8,5,-5,.1,100);camera.position.set(0,0,20);camera.lookAt(0,0,0);
+  const size=geometry.boundingBox.getSize(new THREE.Vector3());
+  let zoom=1, spin=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=0, drag=null, yaw=-.27, pitch=.09, hidden=false;
+  const fit=(width,height) => {
+    const aspect=width/Math.max(1,height), halfHeight=Math.max(size.y*.58,size.x*.58/aspect);
+    camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;camera.top=halfHeight;camera.bottom=-halfHeight;camera.zoom=zoom;camera.updateProjectionMatrix();
+  };
+  const inFrame=() => {
+    sculpture.updateMatrixWorld(true);
+    const b=geometry.boundingBox;
+    for(const x of [b.min.x,b.max.x]) for(const y of [b.min.y,b.max.y]) for(const z of [b.min.z,b.max.z]) {
+      const p=new THREE.Vector3(x,y,z).applyMatrix4(sculpture.matrixWorld).project(camera);
+      if(Math.abs(p.x)>1||Math.abs(p.y)>1||Math.abs(p.z)>1)return false;
+    }
+    return true;
+  };
+  const render=() => {if(fatalErrors)return;sculpture.rotation.set(pitch,yaw,0);renderer.render(scene,camera);};
+  const status=() => {if(fatalErrors)return;send('balling-status',{status:'ready',revision:THREE.REVISION,sourceRows:rows.length,vertices:geometry.attributes.position.count,depth:size.z,inFrame:inFrame(),errors:fatalErrors,spin,yaw,pitch,zoom,networkPolicy:'pinned-three-only',contours:shapes.length});};
+  const resize=() => {if(fatalErrors)return;renderer.setSize(innerWidth,innerHeight);fit(innerWidth,innerHeight);render();status();};
+  const pause=() => {spin=false;status();};
+  renderer.domElement.addEventListener('pointerdown',e=>{if(fatalErrors||(e.pointerType==='mouse'&&e.button!==0))return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);pause();});
+  renderer.domElement.addEventListener('pointermove',e=>{if(fatalErrors||!drag||drag.id!==e.pointerId)return;yaw+=(e.clientX-drag.x)*.008;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-drag.y)*.006,-1.1,1.1);drag.x=e.clientX;drag.y=e.clientY;render();status();});
+  const endDrag=e=>{if(drag?.id===e.pointerId)drag=null;};
+  renderer.domElement.addEventListener('pointerup',endDrag);renderer.domElement.addEventListener('pointercancel',endDrag);
+  renderer.domElement.addEventListener('wheel',e=>{if(fatalErrors)return;e.preventDefault();zoom=THREE.MathUtils.clamp(zoom*Math.exp(-e.deltaY*.001),.55,1.7);fit(innerWidth,innerHeight);render();status();},{passive:false});
+  addEventListener('resize',resize);
+  const reset=()=>{yaw=-.27;pitch=.09;zoom=1;phase=0;fit(innerWidth,innerHeight);render();status();};
+  const exportPNG=()=>{
+    try {
+      const ratio=renderer.getPixelRatio(), dimensions=renderer.getSize(new THREE.Vector2());
+      const framing={left:camera.left,right:camera.right,top:camera.top,bottom:camera.bottom,zoom:camera.zoom};
+      let data;
+      try {
+        renderer.setPixelRatio(1);renderer.setSize(2048,2048,false);fit(2048,2048);render();
+        data=renderer.domElement.toDataURL('image/png');
+      } finally {
+        renderer.setPixelRatio(ratio);renderer.setSize(dimensions.x,dimensions.y,false);
+        Object.assign(camera,framing);camera.updateProjectionMatrix();render();
+      }
+      send('balling-png',{data,width:2048,height:2048});status();
+    } catch(error){send('balling-export-error',{message:String(error?.message||error||'PNG export failed.').slice(0,200)});}
+  };
+  addEventListener('message',e=>{
+    if(fatalErrors||e.source!==parent||e.data?.type!=='balling-command')return;
+    switch(e.data.action){
+      case 'spin':spin=!spin;if(spin){phase=0;}status();break;
+      case 'reset':reset();break;
+      case 'export':exportPNG();break;
+      case 'visibility':hidden=e.data.hidden===true;break;
+      case 'inspect':render();status();break;
+    }
+  });
+  let last=performance.now(),lastReport=0;
+  const animate=now=>{
+    if(fatalErrors)return;
+    animationFrame=requestAnimationFrame(animate);
+    const delta=Math.min((now-last)/1000,.1);last=now;
+    if(hidden)return;
+    if(spin){phase+=delta*.4;yaw=-.27+Math.sin(phase)*.34;render();}
+    if(now-lastReport>1000){status();lastReport=now;}
+  };
+  reset();if(!fatalErrors)animationFrame=requestAnimationFrame(animate);
+} catch(error) { reportError(error); }
+</script>
+</template>
+<script>
+(() => {
+  const frame=document.querySelector('#stage'),status=document.querySelector('#status');
+  const spin=document.querySelector('#spin'),reset=document.querySelector('#reset'),save=document.querySelector('#save');
+  const app=window.__BALLING__={status:'loading',errors:0};
+  const command=action=>{if(app.status==='error')return;frame.contentWindow.postMessage({type:'balling-command',action},'*');};
+  const timeout=setTimeout(()=>{if(app.status==='loading'){status.className='error';status.textContent='Three.js could not start. Check your internet connection and WebGL support, then reload.';}},25000);
+  addEventListener('message',event=>{
+    if(app.status==='error'||event.source!==frame.contentWindow||!event.data||typeof event.data!=='object')return;
+    const data=event.data;
+    if(data.type==='balling-status'&&data.status==='ready'){
+      for(const key of ['status','revision','sourceRows','vertices','depth','inFrame','errors','spin','yaw','pitch','zoom','networkPolicy','contours'])if(Object.hasOwn(data,key))app[key]=data[key];
+      clearTimeout(timeout);if(!app.exportError)status.className='ready';[spin,reset,save].forEach(button=>button.disabled=false);spin.textContent=data.spin?'Pause rotation':'Rotate';spin.setAttribute('aria-pressed',String(data.spin));
+    } else if(data.type==='balling-error'){
+      app.status='error';app.errors++;clearTimeout(timeout);status.className='error';status.textContent='Could not render: '+String(data.message||'WebGL unavailable.').slice(0,200);
+      [spin,reset,save].forEach(button=>button.disabled=true);
+    } else if(data.type==='balling-export-error'){
+      app.exportError=String(data.message||'PNG export failed.').slice(0,200);save.disabled=false;save.textContent='Save PNG ↗';
+      status.className='error';status.textContent='Could not save PNG. The viewer is still available; try again.';
+    } else if(data.type==='balling-png'&&typeof data.data==='string'&&data.data.length<16000000&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(data.data)){
+      app.exportError='';status.className='ready';app.lastPNG=data.data;app.lastExport={width:data.width,height:data.height};save.disabled=false;save.textContent='Save PNG ↗';
+      const link=document.createElement('a');link.href=data.data;link.download='still-balling-3d.png';link.click();
+    }
+  });
+  spin.addEventListener('click',()=>command('spin'));
+  reset.addEventListener('click',()=>command('reset'));
+  save.addEventListener('click',()=>{save.disabled=true;save.textContent='Rendering…';command('export');});
+  addEventListener('keydown',event=>{if(event.target instanceof HTMLButtonElement)return;if(event.code==='Space'){event.preventDefault();command('spin');}else if(event.key.toLowerCase()==='r')command('reset');});
+  document.addEventListener('visibilitychange',()=>frame.contentWindow.postMessage({type:'balling-command',action:'visibility',hidden:document.hidden},'*'));
+  frame.srcdoc=document.querySelector('#scene-source').innerHTML;
+})();
+</script>
+</body>
+</html>
