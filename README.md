@@ -8,7 +8,9 @@ Source: https://github.com/arrojchino/balling
 ## What it does
 
 An ASCII silhouette is traced into contours, extruded as real geometry and rendered
-as a rotating metallic sculpture. No models, no textures, no build step.
+as a floating metallic sculpture. The scene adds a fresnel rim glow, an orbiting
+particle field, a soft contact shadow, bloom and a vignette. Drag to rotate,
+scroll to zoom, and export a 2048px PNG.
 
 ## Controls
 
@@ -18,5 +20,5 @@ as a rotating metallic sculpture. No models, no textures, no build step.
 
 ## Verification
 
-Tested in Chromium: the WebGL scene loads, drag rotation and zoom respond, and the
-export control writes a PNG. The page is a single HTML file with one inline script.
+Tested in Chromium: the WebGL scene loads with no errors, the rim, particles,
+shadow and post-processing are visible, and the export control writes a PNG.
