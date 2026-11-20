@@ -170,6 +170,7 @@ try {
   reliefContext.putImageData(pixels,0,0);
   const bump=new THREE.CanvasTexture(relief);bump.generateMipmaps=false;bump.minFilter=THREE.LinearFilter;bump.magFilter=THREE.LinearFilter;
   const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
+  const HANG_LOW=-.8; const viewOffset=-HANG_LOW*.5;
   const renderer = new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'low-power'});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
@@ -220,7 +221,7 @@ try {
   ggrad.addColorStop(0,'rgba(110,231,255,.55)');ggrad.addColorStop(.45,'rgba(110,231,255,.2)');ggrad.addColorStop(1,'rgba(110,231,255,0)');
   gctx.fillStyle=ggrad;gctx.fillRect(0,0,256,256);
   const underglow=new THREE.Mesh(new THREE.PlaneGeometry(11,11),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(glowCanvas),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
-  underglow.position.set(0,geometry.boundingBox.min.y+.3,-1.4);scene.add(underglow);
+  underglow.position.set(0,geometry.boundingBox.min.y+HANG_LOW+.3,-1.4);scene.add(underglow);
   const keyLight=new THREE.DirectionalLight(0xffffff,3.5);keyLight.position.set(-4,7,8);scene.add(keyLight);
   const rim=new THREE.DirectionalLight(0xcedeFF,2.8);rim.position.set(6,2,-4);scene.add(rim);
   const fill=new THREE.DirectionalLight(0xffffff,1.2);fill.position.set(1,-3,6);scene.add(fill);
@@ -238,13 +239,13 @@ try {
   composer.addPass(vignette);
   composer.addPass(new OutputPass());
   const size=geometry.boundingBox.getSize(new THREE.Vector3());
-  let zoom=1, spin=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=0, drag=null, yaw=-.27, pitch=.09, hidden=false;
+  let zoom=1, spin=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=0, drag=null, baseYaw=-.27, inertia=0, spinVel=0, lastDragT=0, lastDragYaw=-.27, pitch=.09, hidden=false;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let mouseX=0,mouseY=0;
   addEventListener('pointermove',e=>{mouseX=(e.clientX/innerWidth-.5)*2;mouseY=-(e.clientY/innerHeight-.5)*2;});
   const fit=(width,height) => {
-    const aspect=width/Math.max(1,height), halfHeight=Math.max(size.y*.58,size.x*.58/aspect);
-    camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;camera.top=halfHeight;camera.bottom=-halfHeight;camera.zoom=zoom;camera.updateProjectionMatrix();
+    const aspect=width/Math.max(1,height), halfHeight=Math.max(size.y*.58,size.x*.58/aspect)+.35;
+    camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;camera.top=halfHeight+viewOffset;camera.bottom=-halfHeight+viewOffset;camera.zoom=zoom;camera.updateProjectionMatrix();
   };
   const inFrame=() => {
     sculpture.updateMatrixWorld(true);
@@ -255,17 +256,17 @@ try {
     }
     return true;
   };
-  const render=() => {if(fatalErrors)return;sculpture.rotation.set(pitch,yaw,0);composer.render();};
-  const status=() => {if(fatalErrors)return;send('balling-status',{status:'ready',revision:THREE.REVISION,sourceRows:rows.length,vertices:geometry.attributes.position.count,depth:size.z,inFrame:inFrame(),errors:fatalErrors,spin,yaw,pitch,zoom,networkPolicy:'pinned-three-only',contours:shapes.length});};
+  const render=() => {if(fatalErrors)return;sculpture.rotation.set(pitch,baseYaw+Math.sin(phase)*.34+inertia,0);composer.render();};
+  const status=() => {if(fatalErrors)return;send('balling-status',{status:'ready',revision:THREE.REVISION,sourceRows:rows.length,vertices:geometry.attributes.position.count,depth:size.z,inFrame:inFrame(),errors:fatalErrors,spin,yaw:baseYaw+Math.sin(phase)*.34+inertia,pitch,zoom,networkPolicy:'pinned-three-only',contours:shapes.length});};
   const resize=() => {if(fatalErrors)return;renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(Math.min(devicePixelRatio,2));composer.setSize(innerWidth,innerHeight);fit(innerWidth,innerHeight);render();status();};
   const pause=() => {spin=false;status();};
-  renderer.domElement.addEventListener('pointerdown',e=>{if(fatalErrors||(e.pointerType==='mouse'&&e.button!==0))return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);pause();});
-  renderer.domElement.addEventListener('pointermove',e=>{if(fatalErrors||!drag||drag.id!==e.pointerId)return;yaw+=(e.clientX-drag.x)*.008;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-drag.y)*.006,-1.1,1.1);drag.x=e.clientX;drag.y=e.clientY;render();status();});
+  renderer.domElement.addEventListener('pointerdown',e=>{if(fatalErrors||(e.pointerType==='mouse'&&e.button!==0))return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};lastDragT=performance.now();lastDragYaw=baseYaw;spinVel=0;renderer.domElement.setPointerCapture(e.pointerId);pause();});
+  renderer.domElement.addEventListener('pointermove',e=>{if(fatalErrors||!drag||drag.id!==e.pointerId)return;const now=performance.now(),dt=(now-lastDragT)/1000;baseYaw+=(e.clientX-drag.x)*.008;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-drag.y)*.006,-1.1,1.1);if(dt>0)spinVel=THREE.MathUtils.clamp((baseYaw-lastDragYaw)/Math.max(dt,.008),-14,14);lastDragYaw=baseYaw;lastDragT=now;drag.x=e.clientX;drag.y=e.clientY;render();status();});
   const endDrag=e=>{if(drag?.id===e.pointerId)drag=null;};
   renderer.domElement.addEventListener('pointerup',endDrag);renderer.domElement.addEventListener('pointercancel',endDrag);
   renderer.domElement.addEventListener('wheel',e=>{if(fatalErrors)return;e.preventDefault();zoom=THREE.MathUtils.clamp(zoom*Math.exp(-e.deltaY*.001),.55,1.7);fit(innerWidth,innerHeight);render();status();},{passive:false});
   addEventListener('resize',resize);
-  const reset=()=>{yaw=-.27;pitch=.09;zoom=1;phase=0;fit(innerWidth,innerHeight);render();status();};
+  const reset=()=>{baseYaw=-.27;pitch=.09;zoom=1;phase=0;inertia=0;spinVel=0;fit(innerWidth,innerHeight);render();status();};
   const exportPNG=()=>{
     try {
       const ratio=renderer.getPixelRatio(), dimensions=renderer.getSize(new THREE.Vector2());
@@ -300,7 +301,7 @@ try {
     if(hidden)return;
     const t=now/1000;
     if(!reduced){
-      sculpture.position.y=Math.sin(t*.8)*.18;
+      sculpture.position.y=HANG_LOW+Math.sin(t*.8)*.18;
       sculpture.scale.setScalar(1+Math.sin(t*1.3)*.018);
       particles.rotation.y=t*.12;
       particles.position.y=Math.sin(t*.6)*.25;
@@ -309,11 +310,11 @@ try {
       if(material.userData.shader)material.userData.shader.uniforms.uRimStrength.value=.85+Math.sin(t*1.6)*.35;
       camera.position.x+=(mouseX*1.1-camera.position.x)*.05;
       camera.position.y+=(mouseY*.7-camera.position.y)*.05;
-      camera.lookAt(0,0,0);
+      camera.lookAt(0,viewOffset,0);
     }
-    if(spin){phase+=delta*.4;yaw=-.27+Math.sin(phase)*.34;}
-    sculpture.rotation.set(pitch,yaw,0);
-    composer.render();
+    if(!drag&&!reduced){inertia+=spinVel*delta;spinVel*=Math.exp(-delta*1.1);}
+    if(spin){phase+=delta*.4;}
+    render();
     if(now-lastReport>1000){status();lastReport=now;}
   };
   reset();if(!fatalErrors)animationFrame=requestAnimationFrame(animate);

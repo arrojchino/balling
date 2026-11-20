@@ -14,9 +14,11 @@ scroll to zoom, and export a 2048px PNG.
 
 ## Controls
 
-- Drag to rotate the sculpture.
+- Drag to rotate; flick to keep it spinning with inertia.
 - Scroll or pinch to zoom.
 - Use the export control to save a 2048px PNG.
+
+The sculpture hangs low in the frame over a cyan underglow.
 
 ## Verification
 
