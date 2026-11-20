@@ -188,7 +188,7 @@ try {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uRimColor = { value: new THREE.Color(0x6ee7ff) };
     shader.uniforms.uRimPower = { value: 3.2 };
-    shader.uniforms.uRimStrength = { value: 1.1 };
+    shader.uniforms.uRimStrength = { value: .9 };
     material.userData.shader = shader;
     shader.fragmentShader = 'uniform vec3 uRimColor; uniform float uRimPower, uRimStrength;\n' + shader.fragmentShader.replace(
       '#include <emissivemap_fragment>',
@@ -203,7 +203,7 @@ try {
   const wireGeo=geometry.clone();wireGeo.clearGroups();
   const wire=new THREE.Mesh(wireGeo,new THREE.MeshBasicMaterial({color:0x6ee7ff,wireframe:true,transparent:true,opacity:.06,depthWrite:false}));
   wire.scale.setScalar(1.004);sculpture.add(wire);
-  const particleCount=240,pGeo=new THREE.BufferGeometry(),pPos=new Float32Array(particleCount*3);
+  const particleCount=320,pGeo=new THREE.BufferGeometry(),pPos=new Float32Array(particleCount*3);
   for(let i=0;i<particleCount;i++){
     const r=4.0+Math.random()*4.0,a=Math.random()*Math.PI*2,y=(Math.random()-.5)*9.0;
     pPos[i*3]=Math.cos(a)*r;pPos[i*3+1]=y;pPos[i*3+2]=Math.sin(a)*r;
@@ -213,7 +213,7 @@ try {
   const sctx=sprite.getContext('2d'),sgrad=sctx.createRadialGradient(32,32,0,32,32,32);
   sgrad.addColorStop(0,'rgba(255,255,255,1)');sgrad.addColorStop(.35,'rgba(190,225,255,.7)');sgrad.addColorStop(1,'rgba(120,180,255,0)');
   sctx.fillStyle=sgrad;sctx.fillRect(0,0,64,64);
-  const pMat=new THREE.PointsMaterial({color:0x9fd8ff,size:.06,map:new THREE.CanvasTexture(sprite),transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
+  const pMat=new THREE.PointsMaterial({color:0x9fd8ff,size:.07,map:new THREE.CanvasTexture(sprite),transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
   const particles=new THREE.Points(pGeo,pMat);scene.add(particles);
   const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=256;
   const shctx=shadowCanvas.getContext('2d'),shgrad=shctx.createRadialGradient(128,128,0,128,128,128);
@@ -227,7 +227,7 @@ try {
   const camera=new THREE.OrthographicCamera(-8,8,5,-5,.1,100);camera.position.set(0,0,20);camera.lookAt(0,0,0);
   const composer=new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene,camera));
-  const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.48,.32,.82);
+  const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.38,.3,.86);
   composer.addPass(bloom);
   const vignette=new ShaderPass({
     uniforms:{tDiffuse:{value:null},uStrength:{value:.55},uSize:{value:.78}},
@@ -305,8 +305,8 @@ try {
       particles.rotation.y=t*.12;
       particles.position.y=Math.sin(t*.6)*.25;
       pMat.opacity=.55+Math.sin(t*2.0)*.2;
-      wire.material.opacity=.045+(Math.sin(t*1.2)*.5+.5)*.05;
-      if(material.userData.shader)material.userData.shader.uniforms.uRimStrength.value=1.0+Math.sin(t*1.6)*.45;
+      wire.material.opacity=.06+(Math.sin(t*1.2)*.5+.5)*.06;
+      if(material.userData.shader)material.userData.shader.uniforms.uRimStrength.value=.85+Math.sin(t*1.6)*.35;
       camera.position.x+=(mouseX*1.1-camera.position.x)*.05;
       camera.position.y+=(mouseY*.7-camera.position.y)*.05;
       camera.lookAt(0,0,0);
