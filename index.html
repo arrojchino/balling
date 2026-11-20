@@ -215,12 +215,12 @@ try {
   sctx.fillStyle=sgrad;sctx.fillRect(0,0,64,64);
   const pMat=new THREE.PointsMaterial({color:0x9fd8ff,size:.07,map:new THREE.CanvasTexture(sprite),transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
   const particles=new THREE.Points(pGeo,pMat);scene.add(particles);
-  const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=256;
-  const shctx=shadowCanvas.getContext('2d'),shgrad=shctx.createRadialGradient(128,128,0,128,128,128);
-  shgrad.addColorStop(0,'rgba(0,0,0,.55)');shgrad.addColorStop(.55,'rgba(0,0,0,.22)');shgrad.addColorStop(1,'rgba(0,0,0,0)');
-  shctx.fillStyle=shgrad;shctx.fillRect(0,0,256,256);
-  const shadow=new THREE.Mesh(new THREE.PlaneGeometry(9,9),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));
-  shadow.rotation.x=-Math.PI/2;shadow.position.y=geometry.boundingBox.min.y-.35;scene.add(shadow);
+  const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=256;
+  const gctx=glowCanvas.getContext('2d'),ggrad=gctx.createRadialGradient(128,128,0,128,128,128);
+  ggrad.addColorStop(0,'rgba(110,231,255,.55)');ggrad.addColorStop(.45,'rgba(110,231,255,.2)');ggrad.addColorStop(1,'rgba(110,231,255,0)');
+  gctx.fillStyle=ggrad;gctx.fillRect(0,0,256,256);
+  const underglow=new THREE.Mesh(new THREE.PlaneGeometry(11,11),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(glowCanvas),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+  underglow.position.set(0,geometry.boundingBox.min.y+.3,-1.4);scene.add(underglow);
   const keyLight=new THREE.DirectionalLight(0xffffff,3.5);keyLight.position.set(-4,7,8);scene.add(keyLight);
   const rim=new THREE.DirectionalLight(0xcedeFF,2.8);rim.position.set(6,2,-4);scene.add(rim);
   const fill=new THREE.DirectionalLight(0xffffff,1.2);fill.position.set(1,-3,6);scene.add(fill);
@@ -305,7 +305,7 @@ try {
       particles.rotation.y=t*.12;
       particles.position.y=Math.sin(t*.6)*.25;
       pMat.opacity=.55+Math.sin(t*2.0)*.2;
-      wire.material.opacity=.06+(Math.sin(t*1.2)*.5+.5)*.06;
+      wire.material.opacity=.08+(Math.sin(t*1.2)*.5+.5)*.07;
       if(material.userData.shader)material.userData.shader.uniforms.uRimStrength.value=.85+Math.sin(t*1.6)*.35;
       camera.position.x+=(mouseX*1.1-camera.position.x)*.05;
       camera.position.y+=(mouseY*.7-camera.position.y)*.05;
