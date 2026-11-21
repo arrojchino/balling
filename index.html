@@ -5,34 +5,104 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: blob:; frame-src 'self' data: blob:; connect-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="description" content="Still Balling: an ASCII silhouette inflated into a real 3D sculpture, with seven finishes, four lighting looks, switchable effects and live physics.">
 <title>Still balling — Three.js sculpture</title>
 <style>
-:root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif;background:#000;color:#fff}
-*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:360px}
-header{display:flex;align-items:flex-end;justify-content:space-between;padding:30px 38px 0;gap:20px;z-index:1}
-h1{margin:0;font-family:Impact,'Arial Black',sans-serif;font-size:clamp(29px,4.6vw,57px);font-weight:400;line-height:1;letter-spacing:.025em}
-.label,.hint,.readout{font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.6;letter-spacing:.12em;text-transform:uppercase;color:#8c929c}.label{text-align:right;max-width:220px}.label strong{font-weight:400;color:#fff}
-main{position:relative;min-height:0;isolation:isolate}iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;touch-action:none}
-#status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:320px;text-align:center;color:#aab0ba;font-size:13px;line-height:1.7;pointer-events:none}#status.ready{display:none}#status.error{color:#fff}
-footer{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 38px 28px;z-index:1}.hint{letter-spacing:.04em}.controls{display:flex;gap:7px}button{appearance:none;background:#111216;color:#fff;border:1px solid #292c31;border-radius:5px;font:12px Arial,Helvetica,sans-serif;min-height:40px;padding:0 16px;cursor:pointer;white-space:nowrap}button:hover{background:#1e2127;border-color:#6e7582}button:focus-visible{outline:2px solid #CEDEFF;outline-offset:4px}button:disabled{opacity:.35;cursor:wait}#save{background:#fff;border-color:#fff;color:#000}#save:hover{background:#CEDEFF;border-color:#CEDEFF}.readout{margin-top:3px;font-size:9px;color:#626974}
-@media(max-width:600px){header{padding:24px 21px 0;align-items:center}.label{font-size:8px;max-width:105px}footer{padding:0 20px 22px;flex-direction:column;gap:14px}.hint{text-align:center;font-size:9px}.controls{width:100%;justify-content:center}button{flex:1;max-width:150px;padding:0 12px}.readout{display:none}}
-@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+:root{color-scheme:dark;--ink:#f4f6fb;--muted:#8d94a1;--line:rgba(255,255,255,.09);--glass:rgba(12,14,19,.64);--accent:#cedeff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#050608;color:var(--ink)}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#050608}
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#050608;touch-action:none}
+header{position:fixed;top:0;left:0;right:0;z-index:2;display:grid;justify-items:center;gap:7px;padding:24px 20px 0;text-align:center;pointer-events:none}
+.eyebrow{margin:0;font:600 10px/1.4 Consolas,"SFMono-Regular",Menlo,monospace;letter-spacing:.32em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font-family:Impact,Haettenschweiler,"Arial Narrow Bold","Arial Black",sans-serif;font-weight:400;font-size:clamp(30px,4.4vw,54px);line-height:1;letter-spacing:.04em;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+#status{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;max-width:320px;text-align:center;color:#aab0ba;font-size:13px;line-height:1.7;pointer-events:none}
+#status.ready{display:none}#status.error{color:#fff}
+.dock{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;width:min(1000px,calc(100% - 24px));display:grid;gap:10px;padding:14px 16px 12px;border:1px solid var(--line);border-radius:20px;background:var(--glass);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.dock.collapsed .more{display:none}
+.row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.label{font:600 9px/1 Consolas,Menlo,monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin:0 2px 0 6px}
+.finishes{gap:12px}
+.swatch{appearance:none;border:0;background:none;color:var(--muted);display:grid;justify-items:center;gap:6px;padding:2px 3px;cursor:pointer;font:600 10px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.swatch i{display:block;width:34px;height:34px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 14px rgba(0,0,0,.4);transition:transform .18s,box-shadow .18s}
+.swatch:hover i{transform:translateY(-2px)}
+.swatch[aria-checked="true"]{color:var(--ink)}
+.swatch[aria-checked="true"] i{box-shadow:0 0 0 2px #050608,0 0 0 4px var(--accent),0 6px 18px rgba(0,0,0,.5)}
+.sw-chrome{background:radial-gradient(circle at 32% 28%,#fff 0 8%,#c9d1db 22%,#59616c 52%,#1d2126 70%,#aab4c0 100%)}
+.sw-gold{background:radial-gradient(circle at 32% 28%,#fff8e0 0 8%,#ffd77a 24%,#c4891f 52%,#5a3608 72%,#f2c25a 100%)}
+.sw-shiny{background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.95) 0 9%,rgba(255,255,255,0) 32%),conic-gradient(from 210deg,#ff9ad5,#9ae6ff,#c8ff9a,#ffe29a,#ff9ad5)}
+.sw-lava{background:radial-gradient(circle at 40% 40%,#ffe08a 0 6%,#ff7a1a 20%,#a62a06 42%,#2a0c06 64%,#140604 100%)}
+.sw-glass{background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.95) 0 8%,rgba(200,235,255,.35) 30%,rgba(90,130,170,.25) 62%,rgba(220,245,255,.55) 100%)}
+.sw-obsidian{background:radial-gradient(circle at 32% 28%,#8f7dff 0 5%,#2a2440 18%,#0a0a0d 46%,#000 72%,#3a2f6a 100%)}
+.sw-neon{background:radial-gradient(circle,#0a0b10 0 52%,transparent 54%),conic-gradient(#00e5ff,#ff2bd6,#00e5ff)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:rgba(255,255,255,.03)}
+.seg button{appearance:none;border:0;background:none;color:var(--muted);padding:7px 13px;border-radius:999px;font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.05em;cursor:pointer;white-space:nowrap}
+.seg button[aria-checked="true"]{background:var(--ink);color:#07080b}
+.chip{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--muted);padding:7px 12px;border-radius:999px;font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.03em;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2)}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:rgba(206,222,255,.45);background:rgba(206,222,255,.08)}
+.chip[aria-pressed="true"]::before{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.btn{appearance:none;background:#111216;color:#fff;border:1px solid #292c31;border-radius:10px;font:600 12px/1 ui-sans-serif,system-ui,sans-serif;min-height:38px;padding:0 15px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#1e2127;border-color:#6e7582}
+.btn.primary{background:var(--ink);color:#06070a;border-color:var(--ink)}
+.btn.primary:hover{background:var(--accent);border-color:var(--accent)}
+.btn[aria-pressed="true"]{border-color:rgba(206,222,255,.6);color:var(--accent)}
+.btn.quiet{background:transparent;color:var(--muted)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+button:disabled{opacity:.35;cursor:wait}
+.hint{margin:0;text-align:center;font:500 10px/1.5 Consolas,Menlo,monospace;letter-spacing:.05em;color:#6c7380}
+@media(max-width:700px){header{padding-top:16px}.eyebrow{font-size:8px;letter-spacing:.22em}.dock{bottom:10px;padding:10px;gap:8px;border-radius:16px}.row{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.row::-webkit-scrollbar{display:none}.swatch i{width:30px;height:30px}.hint{display:none}.btn{min-height:36px;padding:0 12px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<header><h1>STILL BALLING.</h1><div class="label"><strong>The original silhouette.</strong><br>An extra dimension.</div></header>
-<main aria-label="Interactive metallic sculpture">
-<iframe id="stage" title="Three-dimensional interpretation of your ASCII drawing" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+<iframe id="stage" title="Still Balling: a three-dimensional sculpture of an ASCII silhouette" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+<header><p class="eyebrow">The original silhouette · An extra dimension</p><h1>STILL BALLING.</h1></header>
 <div id="status" role="status" aria-live="polite">Building your silhouette in 3D…</div>
-</main>
-<footer><div class="hint">Drag to rotate · Scroll to zoom<div class="readout">Three.js · Real geometry · No models or textures downloaded</div></div><div class="controls"><button id="spin" type="button" disabled aria-pressed="true">Pause rotation</button><button id="reset" type="button" disabled>Reset view</button><button id="save" type="button" disabled>Save PNG ↗</button></div></footer>
+<section class="dock" aria-label="Sculpture controls">
+  <div class="row finishes more" role="radiogroup" aria-label="Finish">
+    <button class="swatch" type="button" role="radio" aria-checked="false" data-finish="chrome" disabled><i class="sw-chrome"></i>Chrome</button>
+    <button class="swatch" type="button" role="radio" aria-checked="true" data-finish="gold" disabled><i class="sw-gold"></i>Gold</button>
+    <button class="swatch" type="button" role="radio" aria-checked="false" data-finish="shiny" disabled><i class="sw-shiny"></i>Shiny</button>
+    <button class="swatch" type="button" role="radio" aria-checked="false" data-finish="lava" disabled><i class="sw-lava"></i>Lava</button>
+    <button class="swatch" type="button" role="radio" aria-checked="false" data-finish="glass" disabled><i class="sw-glass"></i>Glass</button>
+    <button class="swatch" type="button" role="radio" aria-checked="false" data-finish="obsidian" disabled><i class="sw-obsidian"></i>Obsidian</button>
+    <button class="swatch" type="button" role="radio" aria-checked="false" data-finish="neon" disabled><i class="sw-neon"></i>Neon</button>
+  </div>
+  <div class="row more">
+    <span class="label">Light</span>
+    <div class="seg" role="radiogroup" aria-label="Lighting">
+      <button type="button" role="radio" aria-checked="true" data-light="studio" disabled>Studio</button>
+      <button type="button" role="radio" aria-checked="false" data-light="sunset" disabled>Sunset</button>
+      <button type="button" role="radio" aria-checked="false" data-light="club" disabled>Club</button>
+      <button type="button" role="radio" aria-checked="false" data-light="noir" disabled>Noir</button>
+    </div>
+    <span class="label">Effects</span>
+    <button class="chip" type="button" aria-pressed="true" data-effect="glow" disabled>Glow</button>
+    <button class="chip" type="button" aria-pressed="true" data-effect="sparkles" disabled>Sparkles</button>
+    <button class="chip" type="button" aria-pressed="false" data-effect="embers" disabled>Embers</button>
+    <button class="chip" type="button" aria-pressed="false" data-effect="halo" disabled>Halo</button>
+    <button class="chip" type="button" aria-pressed="false" data-effect="spots" disabled>Spotlights</button>
+    <button class="chip" type="button" aria-pressed="false" data-effect="balls" disabled>Ball rain</button>
+    <button class="chip" type="button" aria-pressed="false" data-effect="film" disabled>Film</button>
+  </div>
+  <div class="row">
+    <button class="btn primary" id="shuffle" type="button" disabled>Shuffle</button>
+    <button class="btn" id="auto" type="button" aria-pressed="false" disabled>Auto</button>
+    <button class="btn" id="drop" type="button" disabled>Drop balls</button>
+    <button class="btn" id="spin" type="button" aria-pressed="true" disabled>Pause</button>
+    <button class="btn" id="reset" type="button" disabled>Reset</button>
+    <button class="btn" id="save" type="button" disabled>Save PNG ↗</button>
+    <button class="btn quiet" id="more" type="button" aria-expanded="true">Hide controls</button>
+  </div>
+  <p class="hint more">Drag to spin · Click the sculpture to poke it · Click empty space to throw a ball · Scroll to zoom · S shuffle · Space pause · B balls</p>
+</section>
 <template id="scene-source">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
 </script>
-<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}</style>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050608}canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}</style>
 <pre id="ascii" hidden>
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -64,293 +134,1128 @@ footer{display:flex;align-items:center;justify-content:space-between;gap:20px;pa
 ⠀⠙⠛⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀
 </pre>
 <script type="module">
-const send = (type, data = {}) => parent.postMessage({type, ...data}, '*');
+const send = (type, data = {}) => parent.postMessage({ type, ...data }, '*');
 let fatalErrors = 0, animationFrame = 0;
-const reportError = error => { if(fatalErrors)return; fatalErrors++; cancelAnimationFrame(animationFrame); send('balling-error', {message: String(error?.message || error).slice(0, 200)}); };
+const reportError = error => {
+  if (fatalErrors) return;
+  fatalErrors++;
+  cancelAnimationFrame(animationFrame);
+  send('balling-error', { message: String(error?.message || error).slice(0, 200) });
+};
 addEventListener('error', event => reportError(event.error || event.message));
 addEventListener('unhandledrejection', event => reportError(event.reason));
+for (const level of ['error', 'warn']) {
+  const original = console[level].bind(console);
+  let sent = 0;
+  console[level] = (...args) => { original(...args); if (sent++ < 20) send('balling-log', { level, message: args.map(a => String(a?.message || a)).join(' ').slice(0, 300) }); };
+}
 try {
-  const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js');
-  const { EffectComposer } = await import('three/addons/postprocessing/EffectComposer.js');
-  const { RenderPass } = await import('three/addons/postprocessing/RenderPass.js');
-  const { UnrealBloomPass } = await import('three/addons/postprocessing/UnrealBloomPass.js');
-  const { OutputPass } = await import('three/addons/postprocessing/OutputPass.js');
-  const { ShaderPass } = await import('three/addons/postprocessing/ShaderPass.js');
-  if(fatalErrors)throw new Error('Scene stopped after a fatal error.');
+  const THREE = await import('three');
+  const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { ShaderPass }, { OutputPass }] = await Promise.all([
+    import('three/addons/postprocessing/EffectComposer.js'),
+    import('three/addons/postprocessing/RenderPass.js'),
+    import('three/addons/postprocessing/UnrealBloomPass.js'),
+    import('three/addons/postprocessing/ShaderPass.js'),
+    import('three/addons/postprocessing/OutputPass.js'),
+  ]);
+  if (fatalErrors) throw new Error('Scene stopped after a fatal error.');
+  const { clamp, lerp } = THREE.MathUtils;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const pick = list => list[Math.floor(Math.random() * list.length)];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const built = performance.now();
+  let buildMs = 0;
+
+  // ---------------------------------------------------------------------------
+  // 1. Braille source -> dot mask. Each character is a 2 x 4 cell of dots.
+  // ---------------------------------------------------------------------------
   const rows = document.querySelector('#ascii').textContent.trim().split(/\r?\n/);
   const W = Math.max(...rows.map(row => row.length)) * 2, H = rows.length * 4;
-  const mask = new Uint8Array(W * H);
-  const dots = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[0,3],[1,3]];
-  for (let row = 0; row < rows.length; row++) {
-    for (let col = 0; col < rows[row].length; col++) {
-      const bits = rows[row].charCodeAt(col) - 0x2800;
-      if (bits < 0 || bits > 255) throw new Error('Unsupported source character.');
-      for (let bit = 0; bit < 8; bit++) if (bits & (1 << bit)) mask[(row * 4 + dots[bit][1]) * W + col * 2 + dots[bit][0]] = 1;
+  const mask = new Uint8Array(W * H), DOTS = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
+  for (let row = 0; row < rows.length; row++) for (let col = 0; col < rows[row].length; col++) {
+    const bits = rows[row].charCodeAt(col) - 0x2800;
+    if (bits < 0 || bits > 255) throw new Error('Unsupported source character.');
+    for (let b = 0; b < 8; b++) if (bits & (1 << b)) mask[(row * 4 + DOTS[b][1]) * W + col * 2 + DOTS[b][0]] = 1;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 2. Dots -> one smooth field on a grid three times finer than the dots.
+  //    Dots are spaced equally in x and y, so the ball in the drawing is round.
+  // ---------------------------------------------------------------------------
+  const SUB = 3, PAD = 14, GW = W * SUB + PAD * 2, GH = H * SUB + PAD * 2, N = GW * GH, ISO = .27;
+  const F = new Float32Array(N);
+  let dots = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (mask[y * W + x]) {
+    dots++;
+    const fx = PAD + (x + .5) * SUB, fy = PAD + (y + .5) * SUB, ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy, i = iy * GW + ix;
+    F[i] += (1 - tx) * (1 - ty); F[i + 1] += tx * (1 - ty); F[i + GW] += (1 - tx) * ty; F[i + GW + 1] += tx * ty;
+  }
+  if (!dots) throw new Error('The original silhouette is empty.');
+  {
+    const sigma = 1.05 * SUB, R = Math.ceil(sigma * 3), k = new Float32Array(R * 2 + 1);
+    let sum = 0;
+    for (let i = -R; i <= R; i++) sum += (k[i + R] = Math.exp(-i * i / (2 * sigma * sigma)));
+    for (let i = 0; i < k.length; i++) k[i] *= SUB / sum; // x SUB per pass: a solid area settles at 1.0
+    const tmp = new Float32Array(N);
+    for (let y = 0; y < GH; y++) for (let x = R; x < GW - R; x++) { let a = 0; for (let i = -R; i <= R; i++) a += F[y * GW + x + i] * k[i + R]; tmp[y * GW + x] = a; }
+    F.fill(0);
+    for (let y = R; y < GH - R; y++) for (let x = 0; x < GW; x++) { let a = 0; for (let i = -R; i <= R; i++) a += tmp[(y + i) * GW + x] * k[i + R]; F[y * GW + x] = a; }
+  }
+  const inside = new Uint8Array(N);
+  for (let i = 0; i < N; i++) inside[i] = F[i] > ISO ? 1 : 0;
+  // Drop specks and pinholes smaller than three dots; count the solid parts.
+  let parts = 0;
+  {
+    const seen = new Uint8Array(N), queue = new Int32Array(N), minSize = SUB * SUB * 3;
+    for (const value of [1, 0]) {
+      seen.fill(0);
+      for (let s = 0; s < N; s++) {
+        if (inside[s] !== value || seen[s]) continue;
+        let head = 0, tail = 0, border = false;
+        queue[tail++] = s; seen[s] = 1;
+        while (head < tail) {
+          const i = queue[head++], x = i % GW, y = (i - x) / GW;
+          if (x === 0 || y === 0 || x === GW - 1 || y === GH - 1) border = true;
+          if (x > 0 && inside[i - 1] === value && !seen[i - 1]) { seen[i - 1] = 1; queue[tail++] = i - 1; }
+          if (x < GW - 1 && inside[i + 1] === value && !seen[i + 1]) { seen[i + 1] = 1; queue[tail++] = i + 1; }
+          if (y > 0 && inside[i - GW] === value && !seen[i - GW]) { seen[i - GW] = 1; queue[tail++] = i - GW; }
+          if (y < GH - 1 && inside[i + GW] === value && !seen[i + GW]) { seen[i + GW] = 1; queue[tail++] = i + GW; }
+        }
+        if (tail < minSize && !(value === 0 && border)) for (let q = 0; q < tail; q++) inside[queue[q]] = 1 - value;
+        else if (value === 1) parts++;
+      }
     }
   }
-  // Trace the occupied braille cells, keeping disconnected details and holes.
-  const edges = [], starts = new Map();
-  const key = (x, y) => y * (W + 1) + x;
-  const occupied = (x, y) => x >= 0 && y >= 0 && x < W && y < H && mask[y * W + x] === 1;
-  const edge = (ax, ay, bx, by) => {
-    const id = edges.length;
-    edges.push({a:[ax,ay], b:[bx,by], used:false});
-    const k = key(ax,ay);
-    if (!starts.has(k)) starts.set(k, []);
-    starts.get(k).push(id);
+  let minX = GW, minY = GH, maxX = -1, maxY = -1;
+  for (let i = 0; i < N; i++) if (inside[i]) {
+    const x = i % GW, y = (i - x) / GW;
+    if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  if (maxX < 0) throw new Error('The original silhouette is empty.');
+
+  // ---------------------------------------------------------------------------
+  // 3. Inflate: solve laplacian(h) = -1 with h = 0 on the smooth outline
+  //    (Shortley-Weller spacing at the boundary), then thickness = sqrt(h).
+  //    Thin limbs become round tubes, the ball becomes a ball.
+  // ---------------------------------------------------------------------------
+  const theta = (i, j) => { const d = F[i] - F[j]; return d > 1e-6 ? clamp((F[i] - ISO) / d, .06, 1) : .5; };
+  const idx = new Int32Array(N).fill(-1), ids = [];
+  for (let i = 0; i < N; i++) if (inside[i]) { idx[i] = ids.length; ids.push(i); }
+  const M = ids.length, nb = new Int32Array(M * 4), cf = new Float32Array(M * 4), sp = new Float32Array(M * 4), dg = new Float32Array(M);
+  for (let m = 0; m < M; m++) {
+    const i = ids[m], around = [i - 1, i + 1, i - GW, i + GW];
+    let diag = 0;
+    for (let a = 0; a < 4; a += 2) {
+      const jl = around[a], jr = around[a + 1], il = inside[jl] === 1, ir = inside[jr] === 1;
+      const dl = il ? 1 : theta(i, jl), dr = ir ? 1 : theta(i, jr);
+      const cl = 2 / (dl * (dl + dr)), cr = 2 / (dr * (dl + dr));
+      nb[m * 4 + a] = il ? idx[jl] : -1; nb[m * 4 + a + 1] = ir ? idx[jr] : -1;
+      cf[m * 4 + a] = il ? cl : 0; cf[m * 4 + a + 1] = ir ? cr : 0;
+      sp[m * 4 + a] = dl; sp[m * 4 + a + 1] = dr;
+      diag += cl + cr;
+    }
+    dg[m] = diag;
+  }
+  const h = new Float32Array(M);
+  {
+    const red = [], black = [];
+    for (let m = 0; m < M; m++) { const i = ids[m], x = i % GW; (((x + (i - x) / GW) & 1) ? black : red).push(m); }
+    const sweep = list => {
+      for (let q = 0; q < list.length; q++) {
+        const m = list[q], b = m * 4;
+        let acc = 1;
+        for (let t = 0; t < 4; t++) { const n = nb[b + t]; if (n >= 0) acc += cf[b + t] * h[n]; }
+        h[m] += 1.85 * (acc / dg[m] - h[m]);
+      }
+    };
+    const R = Int32Array.from(red), B = Int32Array.from(black);
+    for (let it = 0; it < 360; it++) { sweep(R); sweep(B); }
+  }
+  const ALPHA = 1.7, S = new Float32Array(N);
+  for (let m = 0; m < M; m++) S[ids[m]] = ALPHA * Math.sqrt(Math.max(h[m], 0));
+
+  // ---------------------------------------------------------------------------
+  // 4. Mesh: front and back surfaces over a marching-squares triangulation of
+  //    the smooth outline, with analytic normals (no faceting, no stair steps).
+  // ---------------------------------------------------------------------------
+  const HEIGHT = 4, K = HEIGHT / (maxY - minY), CX = (minX + maxX) / 2, CY = (minY + maxY) / 2;
+  const P = [], NR = [], IX = [];
+  const front = new Int32Array(N).fill(-1), back = new Int32Array(N).fill(-1), edgeH = new Int32Array(N).fill(-1), edgeV = new Int32Array(N).fill(-1);
+  const nodeVertex = (i, isBack) => {
+    const store = isBack ? back : front;
+    if (store[i] >= 0) return store[i];
+    const m = idx[i], b = m * 4;
+    const hl = nb[b] >= 0 ? h[nb[b]] : 0, hr = nb[b + 1] >= 0 ? h[nb[b + 1]] : 0, hu = nb[b + 2] >= 0 ? h[nb[b + 2]] : 0, hd = nb[b + 3] >= 0 ? h[nb[b + 3]] : 0;
+    const hx = (hr - hl) / (sp[b] + sp[b + 1]), hy = (hd - hu) / (sp[b + 2] + sp[b + 3]);
+    let nx = -ALPHA * hx, ny = ALPHA * hy, nz = 2 * Math.sqrt(Math.max(h[m], 1e-7));
+    const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+    const x = i % GW, y = (i - x) / GW;
+    store[i] = P.length / 3;
+    P.push((x - CX) * K, (CY - y) * K, S[i] * K * (isBack ? -1 : 1));
+    NR.push(nx, ny, isBack ? -nz : nz);
+    return store[i];
   };
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (occupied(x,y)) {
-    if (!occupied(x,y-1)) edge(x,y,x+1,y);
-    if (!occupied(x+1,y)) edge(x+1,y,x+1,y+1);
-    if (!occupied(x,y+1)) edge(x+1,y+1,x,y+1);
-    if (!occupied(x-1,y)) edge(x,y+1,x,y);
-  }
-  const loops = [];
-  for (let first = 0; first < edges.length; first++) {
-    if (edges[first].used) continue;
-    const points = []; let current = first, closed = false;
-    for (let limit = 0; limit <= edges.length; limit++) {
-      const e = edges[current]; e.used = true; points.push(e.a);
-      if (e.b[0] === edges[first].a[0] && e.b[1] === edges[first].a[1]) { closed = true; break; }
-      const next = (starts.get(key(...e.b)) || []).filter(id => !edges[id].used);
-      if (!next.length) break;
-      const dx = e.b[0]-e.a[0], dy = e.b[1]-e.a[1];
-      const turn = id => { const n=edges[id], nx=n.b[0]-n.a[0], ny=n.b[1]-n.a[1]; return (Math.atan2(dx*ny-dy*nx,dx*nx+dy*ny)+Math.PI*2)%(Math.PI*2); };
-      next.sort((a,b) => turn(a)-turn(b)); current = next[0];
-    }
-    if (!closed) throw new Error('A source contour did not close.');
-    const reduced = points.filter((p,i) => {const a=points[(i+points.length-1)%points.length],b=points[(i+1)%points.length];return (p[0]-a[0])*(b[1]-p[1]) !== (p[1]-a[1])*(b[0]-p[0]);});
-    if (reduced.length >= 3) loops.push(reduced.map(([x,y]) => new THREE.Vector2((x-W/2)*.09,(H/2-y)*.065)));
-  }
-  const shapes = [], holes = [];
-  for (const loop of loops) {
-    if (THREE.ShapeUtils.isClockWise(loop)) shapes.push(new THREE.Shape(loop)); else holes.push(loop);
-  }
-  const contains = (polygon, p) => {
-    let inside = false;
-    for (let i=0,j=polygon.length-1;i<polygon.length;j=i++) {
-      const a=polygon[i],b=polygon[j];
-      if ((a.y>p.y)!==(b.y>p.y) && p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x) inside=!inside;
-    }
-    return inside;
+  const edgeVertex = (a, c, horizontal) => {
+    const key = Math.min(a, c), store = horizontal ? edgeH : edgeV;
+    if (store[key] >= 0) return store[key];
+    const i = inside[a] ? a : c, j = inside[a] ? c : a, t = theta(i, j);
+    const xi = i % GW, yi = (i - xi) / GW, xj = j % GW, yj = (j - xj) / GW;
+    const gx = lerp((F[i + 1] - F[i - 1]) * .5, (F[j + 1] - F[j - 1]) * .5, t), gy = lerp((F[i + GW] - F[i - GW]) * .5, (F[j + GW] - F[j - GW]) * .5, t);
+    const l = Math.hypot(gx, gy) || 1;
+    store[key] = P.length / 3;
+    P.push((xi + (xj - xi) * t - CX) * K, (CY - (yi + (yj - yi) * t)) * K, 0);
+    NR.push(-gx / l, gy / l, 0);
+    return store[key];
   };
-  for (const hole of holes) {
-    const candidates=shapes.filter(shape => contains(shape.getPoints(),hole[0]));
-    candidates.sort((a,b) => Math.abs(THREE.ShapeUtils.area(a.getPoints()))-Math.abs(THREE.ShapeUtils.area(b.getPoints())));
-    if (candidates[0]) candidates[0].holes.push(new THREE.Path(hole));
+  {
+    const corner = [0, 0, 0, 0], ins = [0, 0, 0, 0];
+    const edge = k => edgeVertex(corner[k], corner[(k + 1) & 3], (k & 1) === 0);
+    const fan = (fv, bv) => { for (let k = 1; k < fv.length - 1; k++) IX.push(fv[0], fv[k + 1], fv[k], bv[0], bv[k], bv[k + 1]); };
+    for (let y = minY - 1; y <= maxY; y++) for (let x = minX - 1; x <= maxX; x++) {
+      corner[0] = y * GW + x; corner[1] = corner[0] + 1; corner[2] = corner[1] + GW; corner[3] = corner[0] + GW;
+      let count = 0;
+      for (let k = 0; k < 4; k++) count += (ins[k] = inside[corner[k]]);
+      if (!count) continue;
+      if (count === 2 && ins[0] === ins[2] && (F[corner[0]] + F[corner[1]] + F[corner[2]] + F[corner[3]]) * .25 <= ISO) {
+        for (let k = 0; k < 4; k++) if (ins[k]) {
+          const e0 = edge((k + 3) & 3), e1 = edge(k);
+          fan([e0, nodeVertex(corner[k], false), e1], [e0, nodeVertex(corner[k], true), e1]);
+        }
+        continue;
+      }
+      const fv = [], bv = [];
+      for (let k = 0; k < 4; k++) {
+        if (ins[k]) { fv.push(nodeVertex(corner[k], false)); bv.push(nodeVertex(corner[k], true)); }
+        if (ins[k] !== ins[(k + 1) & 3]) { const e = edge(k); fv.push(e); bv.push(e); }
+      }
+      fan(fv, bv);
+    }
   }
-  if (!shapes.length) throw new Error('The original silhouette is empty.');
-  const geometry = new THREE.ExtrudeGeometry(shapes,{depth:.68,bevelEnabled:true,bevelSegments:4,steps:1,bevelSize:.026,bevelThickness:.12,curveSegments:4});
-  geometry.computeBoundingBox();
-  const sourceCenter=geometry.boundingBox.getCenter(new THREE.Vector3());
-  geometry.center(); geometry.computeBoundingBox(); geometry.computeBoundingSphere();
-  const positions=geometry.attributes.position, uv=new Float32Array(positions.count*2);
-  for(let i=0;i<positions.count;i++){
-    uv[i*2]=(positions.getX(i)+sourceCenter.x)/(W*.09)+.5;
-    uv[i*2+1]=(positions.getY(i)+sourceCenter.y)/(H*.065)+.5;
-  }
-  geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));
-  // Distance-to-edge gives the original flat mark a softly sculpted face.
-  const distance=new Float32Array(W*H);
-  for(let i=0;i<distance.length;i++)distance[i]=mask[i]?10000:0;
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(mask[y*W+x]){
-    const i=y*W+x;
-    distance[i]=Math.min(distance[i],x?distance[i-1]+1:1,y?distance[i-W]+1:1,x&&y?distance[i-W-1]+1.414:1,y&&x<W-1?distance[i-W+1]+1.414:1);
-  }
-  for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--)if(mask[y*W+x]){
-    const i=y*W+x;
-    distance[i]=Math.min(distance[i],x<W-1?distance[i+1]+1:1,y<H-1?distance[i+W]+1:1,x<W-1&&y<H-1?distance[i+W+1]+1.414:1,x&&y<H-1?distance[i+W-1]+1.414:1);
-  }
-  const relief=document.createElement('canvas');relief.width=W;relief.height=H;
-  const reliefContext=relief.getContext('2d'),pixels=reliefContext.createImageData(W,H);
-  for(let i=0;i<distance.length;i++){
-    const value=Math.round(255*(1-Math.exp(-distance[i]*.26)));
-    pixels.data[i*4]=pixels.data[i*4+1]=pixels.data[i*4+2]=value;pixels.data[i*4+3]=255;
-  }
-  reliefContext.putImageData(pixels,0,0);
-  const bump=new THREE.CanvasTexture(relief);bump.generateMipmaps=false;bump.minFilter=THREE.LinearFilter;bump.magFilter=THREE.LinearFilter;
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
-  const HANG_LOW=-.8; const viewOffset=-HANG_LOW*.5;
-  const renderer = new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'low-power'});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
-  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(NR, 3));
+  geometry.setIndex(IX);
+  geometry.computeBoundingBox(); geometry.computeBoundingSphere();
+  const size = geometry.boundingBox.getSize(new THREE.Vector3());
+
+  // Distance from every outside grid node to the solid, for ball collisions at the rim.
+  const OUT = (() => {
+    const INF = 1e20, n = Math.max(GW, GH), f = new Float64Array(n), d = new Float64Array(n), v = new Int32Array(n), z = new Float64Array(n + 1);
+    const out = new Float32Array(N);
+    for (let i = 0; i < N; i++) out[i] = inside[i] ? 0 : INF;
+    const pass = (len, start, stride) => {
+      for (let q = 0; q < len; q++) f[q] = out[start + q * stride];
+      let k = 0; v[0] = 0; z[0] = -INF; z[1] = INF;
+      for (let q = 1; q < len; q++) {
+        let s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+        while (s <= z[k]) { k--; s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); }
+        k++; v[k] = q; z[k] = s; z[k + 1] = INF;
+      }
+      k = 0;
+      for (let q = 0; q < len; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; }
+      for (let q = 0; q < len; q++) out[start + q * stride] = d[q];
+    };
+    for (let x = 0; x < GW; x++) pass(GH, x, GW);
+    for (let y = 0; y < GH; y++) pass(GW, y * GW, 1);
+    for (let i = 0; i < N; i++) out[i] = Math.sqrt(out[i]);
+    return out;
+  })();
+  const sample = (A, gx, gy, fallback) => {
+    const x0 = Math.floor(gx), y0 = Math.floor(gy);
+    if (x0 < 0 || y0 < 0 || x0 >= GW - 1 || y0 >= GH - 1) return fallback;
+    const tx = gx - x0, ty = gy - y0, i = y0 * GW + x0;
+    return (A[i] * (1 - tx) + A[i + 1] * tx) * (1 - ty) + (A[i + GW] * (1 - tx) + A[i + GW + 1] * tx) * ty;
+  };
+  const contact = { nx: 0, ny: 0, nz: 0, push: 0 };
+  // Ball centre (sculpture space) against the inflated solid: front/back surface or the rim.
+  const touch = (x, y, z, r) => {
+    const gx = x / K + CX, gy = CY - y / K;
+    if (gx < 2 || gy < 2 || gx > GW - 3 || gy > GH - 3) return false;
+    const s = sample(S, gx, gy, 0) * K;
+    if (s > 1e-4) {
+      const side = z >= 0 ? 1 : -1;
+      let nx = -(sample(S, gx + 1, gy, 0) - sample(S, gx - 1, gy, 0)) * .5, ny = (sample(S, gx, gy + 1, 0) - sample(S, gx, gy - 1, 0)) * .5, nz = side;
+      const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+      const dist = (Math.abs(z) - s) * Math.abs(nz);
+      if (dist >= r) return false;
+      contact.nx = nx; contact.ny = ny; contact.nz = nz; contact.push = r - dist;
+      return true;
+    }
+    const d = sample(OUT, gx, gy, 1e3) * K, D = Math.hypot(d, z);
+    if (D >= r || D < 1e-6) return false;
+    let ux = sample(OUT, gx + 1, gy, 1e3) - sample(OUT, gx - 1, gy, 1e3), uy = -(sample(OUT, gx, gy + 1, 1e3) - sample(OUT, gx, gy - 1, 1e3));
+    const gl = Math.hypot(ux, uy) || 1; ux = ux / gl * d; uy = uy / gl * d;
+    const l = Math.hypot(ux, uy, z) || 1;
+    contact.nx = ux / l; contact.ny = uy / l; contact.nz = z / l; contact.push = r - D;
+    return true;
+  };
+
+  // ---------------------------------------------------------------------------
+  // 5. Renderer, procedural studio, stage.
+  // ---------------------------------------------------------------------------
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+  const maxDpr = Math.min(devicePixelRatio || 1, 2);
+  let dpr = Math.min(maxDpr, 1.5);
+  renderer.setPixelRatio(dpr); renderer.setSize(innerWidth, innerHeight, false);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
-  renderer.domElement.setAttribute('aria-label','Drag to rotate the metallic sculpture');
-  renderer.domElement.addEventListener('webglcontextlost', event => {event.preventDefault();reportError(new Error('WebGL context lost. Reload this page.'));});
-  // A procedural studio: no external textures, models, or HDRI downloads.
-  const studio = document.createElement('canvas'); studio.width=1024; studio.height=512;
-  const ctx=studio.getContext('2d'); ctx.fillStyle='#111216'; ctx.fillRect(0,0,1024,512);
-  const panel=(x,y,w,h,color) => {ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
-  panel(105,40,135,420,'#FFFFFF');panel(425,100,245,75,'#BFD6FF');panel(775,20,90,470,'#FFFFFF');panel(955,190,69,120,'#628CD4');
-  const environment = new THREE.CanvasTexture(studio); environment.mapping=THREE.EquirectangularReflectionMapping; environment.colorSpace=THREE.SRGBColorSpace;
-  const pmrem = new THREE.PMREMGenerator(renderer), envTarget=pmrem.fromEquirectangular(environment);
-  scene.environment=envTarget.texture;scene.environmentIntensity=1.8;environment.dispose();pmrem.dispose();
-  const material=new THREE.MeshPhysicalMaterial({color:0xc8cdd6,metalness:1,roughness:.23,clearcoat:.6,clearcoatRoughness:.16,bumpMap:bump,bumpScale:.8});
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.uRimColor = { value: new THREE.Color(0x6ee7ff) };
-    shader.uniforms.uRimPower = { value: 3.2 };
-    shader.uniforms.uRimStrength = { value: .9 };
-    material.userData.shader = shader;
-    shader.fragmentShader = 'uniform vec3 uRimColor; uniform float uRimPower, uRimStrength;\n' + shader.fragmentShader.replace(
-      '#include <emissivemap_fragment>',
-      `#include <emissivemap_fragment>
-       float fres = pow(1.0 - saturate(dot(normalize(vNormal), normalize(vViewPosition))), uRimPower);
-       totalEmissiveRadiance += uRimColor * fres * uRimStrength;`
-    );
-  };
-  material.customProgramCacheKey = () => 'balling-rim';
-  const edgeMaterial=new THREE.MeshPhysicalMaterial({color:0x8993a4,metalness:.95,roughness:.27});
-  const sculpture=new THREE.Mesh(geometry,[material,edgeMaterial]);sculpture.name='Original ASCII silhouette';scene.add(sculpture);
-  const wireGeo=geometry.clone();wireGeo.clearGroups();
-  const wire=new THREE.Mesh(wireGeo,new THREE.MeshBasicMaterial({color:0x6ee7ff,wireframe:true,transparent:true,opacity:.06,depthWrite:false}));
-  wire.scale.setScalar(1.004);sculpture.add(wire);
-  const particleCount=320,pGeo=new THREE.BufferGeometry(),pPos=new Float32Array(particleCount*3);
-  for(let i=0;i<particleCount;i++){
-    const r=4.0+Math.random()*4.0,a=Math.random()*Math.PI*2,y=(Math.random()-.5)*9.0;
-    pPos[i*3]=Math.cos(a)*r;pPos[i*3+1]=y;pPos[i*3+2]=Math.sin(a)*r;
+  renderer.domElement.setAttribute('aria-label', 'Drag to spin the sculpture, click it to poke it, click empty space to throw a ball');
+  renderer.debug.onShaderError = (gl, program, vs, fs) => reportError(new Error('Shader failed to compile: ' + (gl.getShaderInfoLog(fs) || gl.getShaderInfoLog(vs) || gl.getProgramInfoLog(program) || 'unknown').trim().slice(0, 160)));
+  renderer.domElement.addEventListener('webglcontextlost', event => { event.preventDefault(); reportError(new Error('WebGL context lost. Reload this page.')); });
+
+  const scene = new THREE.Scene();
+  {
+    // Procedural photo studio: a dark room lit by softboxes, so metals get real contrast.
+    const env = new THREE.Scene();
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(32, 20, 32), new THREE.MeshBasicMaterial({ color: 0x0a0b0e, side: THREE.BackSide })));
+    const panel = (w, hgt, power, pos, color = 0xffffff) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, hgt), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(power), side: THREE.DoubleSide }));
+      m.position.set(...pos); m.lookAt(0, 0, 0); env.add(m);
+    };
+    panel(14, 7, 4.5, [0, 9.5, 1]);
+    panel(2.4, 13, 9, [-12, 2, 4]);
+    panel(2.4, 13, 6, [12, 2, -3]);
+    panel(11, 3.2, 1.8, [0, .5, 14]);
+    panel(9, 2.6, 1.4, [0, -1.5, -14], 0xcfe0ff);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(env, .02).texture;
+    pmrem.dispose();
   }
-  pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
-  const sprite=document.createElement('canvas');sprite.width=sprite.height=64;
-  const sctx=sprite.getContext('2d'),sgrad=sctx.createRadialGradient(32,32,0,32,32,32);
-  sgrad.addColorStop(0,'rgba(255,255,255,1)');sgrad.addColorStop(.35,'rgba(190,225,255,.7)');sgrad.addColorStop(1,'rgba(120,180,255,0)');
-  sctx.fillStyle=sgrad;sctx.fillRect(0,0,64,64);
-  const pMat=new THREE.PointsMaterial({color:0x9fd8ff,size:.07,map:new THREE.CanvasTexture(sprite),transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
-  const particles=new THREE.Points(pGeo,pMat);scene.add(particles);
-  const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=256;
-  const gctx=glowCanvas.getContext('2d'),ggrad=gctx.createRadialGradient(128,128,0,128,128,128);
-  ggrad.addColorStop(0,'rgba(110,231,255,.55)');ggrad.addColorStop(.45,'rgba(110,231,255,.2)');ggrad.addColorStop(1,'rgba(110,231,255,0)');
-  gctx.fillStyle=ggrad;gctx.fillRect(0,0,256,256);
-  const underglow=new THREE.Mesh(new THREE.PlaneGeometry(11,11),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(glowCanvas),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
-  underglow.position.set(0,geometry.boundingBox.min.y+HANG_LOW+.3,-1.4);scene.add(underglow);
-  const keyLight=new THREE.DirectionalLight(0xffffff,3.5);keyLight.position.set(-4,7,8);scene.add(keyLight);
-  const rim=new THREE.DirectionalLight(0xcedeFF,2.8);rim.position.set(6,2,-4);scene.add(rim);
-  const fill=new THREE.DirectionalLight(0xffffff,1.2);fill.position.set(1,-3,6);scene.add(fill);
-  const camera=new THREE.OrthographicCamera(-8,8,5,-5,.1,100);camera.position.set(0,0,20);camera.lookAt(0,0,0);
-  const composer=new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene,camera));
-  const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.38,.3,.86);
-  composer.addPass(bloom);
-  const vignette=new ShaderPass({
-    uniforms:{tDiffuse:{value:null},uStrength:{value:.55},uSize:{value:.78}},
-    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-    fragmentShader:`uniform sampler2D tDiffuse;uniform float uStrength,uSize;varying vec2 vUv;
-      void main(){vec4 c=texture2D(tDiffuse,vUv);float d=distance(vUv,vec2(.5));c.rgb*=mix(1.0,smoothstep(uSize,uSize-.5,d),uStrength);gl_FragColor=c;}`
-  });
-  composer.addPass(vignette);
-  composer.addPass(new OutputPass());
-  const size=geometry.boundingBox.getSize(new THREE.Vector3());
-  let zoom=1, spin=!matchMedia('(prefers-reduced-motion: reduce)').matches, phase=0, drag=null, baseYaw=-.27, inertia=0, spinVel=0, lastDragT=0, lastDragYaw=-.27, pitch=.09, hidden=false;
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let mouseX=0,mouseY=0;
-  addEventListener('pointermove',e=>{mouseX=(e.clientX/innerWidth-.5)*2;mouseY=-(e.clientY/innerHeight-.5)*2;});
-  const fit=(width,height) => {
-    const aspect=width/Math.max(1,height), halfHeight=Math.max(size.y*.58,size.x*.58/aspect)+.35;
-    camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;camera.top=halfHeight+viewOffset;camera.bottom=-halfHeight+viewOffset;camera.zoom=zoom;camera.updateProjectionMatrix();
+  const shared = { uTime: { value: 0 }, uPoke: { value: new THREE.Vector4(0, 0, 0, -10) }, uPokeAmp: { value: .05 } };
+  const pxU = { value: 1 };
+
+  // Backdrop: a full-screen gradient with a soft glow behind the sculpture.
+  const bgU = { uTop: { value: new THREE.Color() }, uBottom: { value: new THREE.Color() }, uGlow: { value: new THREE.Color() }, uGlowStr: { value: .5 }, uAspect: { value: 1 }, uCenter: { value: new THREE.Vector2(.5, .55) } };
+  {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
+    const backdrop = new THREE.Mesh(g, new THREE.ShaderMaterial({
+      uniforms: bgU, depthTest: false, depthWrite: false,
+      vertexShader: 'varying vec2 vUv;\nvoid main(){ vUv = position.xy * .5 + .5; gl_Position = vec4(position.xy, 1., 1.); }',
+      fragmentShader: `uniform vec3 uTop, uBottom, uGlow; uniform float uGlowStr, uAspect; uniform vec2 uCenter; varying vec2 vUv;
+        void main(){
+          vec2 p = vUv - uCenter; p.x *= uAspect; float r = length(p);
+          vec3 c = mix(uBottom, uTop, smoothstep(0., 1., vUv.y));
+          c += uGlow * uGlowStr * exp(-r * r * 3.4);
+          c *= 1. - .55 * smoothstep(.5, 1.25, r);
+          float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+          gl_FragColor = vec4(max(c + (n - .5) / 255., 0.), 1.);
+        }`,
+    }));
+    backdrop.frustumCulled = false; backdrop.renderOrder = -10;
+    scene.add(backdrop);
+  }
+
+  const FLOOR_Y = -2.92, PODIUM_R = 2.4, PODIUM_TOP = -2.64, REST_Y = 0, COURT_R = 4.4;
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x15171d, roughness: .62, metalness: 0, envMapIntensity: .35, transparent: true });
+  floorMat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vFloor;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvFloor = position.xy;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vFloor;')
+      .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\ndiffuseColor.a *= 1. - smoothstep(3.6, 10.5, length(vFloor));');
   };
-  const inFrame=() => {
-    sculpture.updateMatrixWorld(true);
-    const b=geometry.boundingBox;
-    for(const x of [b.min.x,b.max.x]) for(const y of [b.min.y,b.max.y]) for(const z of [b.min.z,b.max.z]) {
-      const p=new THREE.Vector3(x,y,z).applyMatrix4(sculpture.matrixWorld).project(camera);
-      if(Math.abs(p.x)>1||Math.abs(p.y)>1||Math.abs(p.z)>1)return false;
+  floorMat.customProgramCacheKey = () => 'balling-floor';
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(11, 96), floorMat);
+  floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR_Y; floor.receiveShadow = true;
+  const podium = new THREE.Mesh(new THREE.CylinderGeometry(PODIUM_R, PODIUM_R + .1, PODIUM_TOP - FLOOR_Y, 128, 1),
+    new THREE.MeshPhysicalMaterial({ color: 0x262a31, roughness: .55, metalness: .4, clearcoat: .45, clearcoatRoughness: .3, envMapIntensity: .42 }));
+  podium.position.y = (PODIUM_TOP + FLOOR_Y) / 2; podium.receiveShadow = true; podium.castShadow = true;
+  const rimRingMat = new THREE.MeshBasicMaterial({ color: 0x7fd6ff });
+  const rimRing = new THREE.Mesh(new THREE.TorusGeometry(PODIUM_R - .015, .013, 8, 256), rimRingMat);
+  rimRing.rotation.x = Math.PI / 2; rimRing.position.y = PODIUM_TOP + .002;
+  // A low metal lip on the floor keeps rolling balls in view, like the edge of a court circle.
+  const court = new THREE.Mesh(new THREE.TorusGeometry(COURT_R, .04, 12, 220), new THREE.MeshStandardMaterial({ color: 0x30343c, roughness: .35, metalness: .7, envMapIntensity: .5 }));
+  court.rotation.x = Math.PI / 2; court.position.y = FLOOR_Y + .04; court.receiveShadow = true;
+  scene.add(floor, podium, rimRing, court);
+
+  // Lights. Their count never changes, so switching looks never recompiles shaders.
+  const key = new THREE.DirectionalLight(0xffffff, 3);
+  key.position.set(-4.5, 8, 6.5); key.target.position.set(0, -1, 0); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -.0004; key.shadow.normalBias = .03; key.shadow.radius = 5;
+  Object.assign(key.shadow.camera, { left: -4.6, right: 4.6, top: 4.6, bottom: -4.6, near: 1, far: 30 }); key.shadow.camera.updateProjectionMatrix();
+  const rimA = new THREE.DirectionalLight(0xffffff, 4); rimA.position.set(6, 3.5, -6);
+  const rimB = new THREE.DirectionalLight(0xffffff, 2.4); rimB.position.set(-6.5, 2.5, -5);
+  const fill = new THREE.DirectionalLight(0xffffff, .5); fill.position.set(0, -3, 8);
+  const spot = new THREE.SpotLight(0xffffff, 0, 0, .34, .5, 2);
+  spot.position.set(0, 11, 2.6); spot.target.position.set(0, -.6, 0); spot.castShadow = true;
+  spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -.0005; spot.shadow.normalBias = .03;
+  scene.add(key, key.target, rimA, rimB, fill, spot, spot.target);
+
+  // ---------------------------------------------------------------------------
+  // 6. Finishes: stock PBR materials plus injected noise, rim, dissolve, poke.
+  // ---------------------------------------------------------------------------
+  const NOISE = `
+    vec3 mod289(vec3 x){ return x - floor(x * (1. / 289.)) * 289.; }
+    vec4 mod289(vec4 x){ return x - floor(x * (1. / 289.)) * 289.; }
+    vec4 permute(vec4 x){ return mod289(((x * 34.) + 10.) * x); }
+    vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - .85373472095314 * r; }
+    float snoise(vec3 v){
+      const vec2 C = vec2(1. / 6., 1. / 3.); const vec4 D = vec4(0., .5, 1., 2.);
+      vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx);
+      vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1. - g; vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy);
+      vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy;
+      i = mod289(i);
+      vec4 p = permute(permute(permute(i.z + vec4(0., i1.z, i2.z, 1.)) + i.y + vec4(0., i1.y, i2.y, 1.)) + i.x + vec4(0., i1.x, i2.x, 1.));
+      float n_ = .142857142857; vec3 ns = n_ * D.wyz - D.xzx;
+      vec4 j = p - 49. * floor(p * ns.z * ns.z);
+      vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7. * x_);
+      vec4 x = x_ * ns.x + ns.yyyy; vec4 y = y_ * ns.x + ns.yyyy; vec4 h = 1. - abs(x) - abs(y);
+      vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw);
+      vec4 s0 = floor(b0) * 2. + 1.; vec4 s1 = floor(b1) * 2. + 1.; vec4 sh = -step(h, vec4(0.));
+      vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+      vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y); vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w);
+      vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+      p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+      vec4 m = max(.5 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.); m = m * m;
+      return 105. * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+    }
+    float fbm(vec3 p){ float a = .5, s = 0.; for (int i = 0; i < 4; i++) { s += a * (snoise(p) * .5 + .5); p = p * 2.03 + 17.1; a *= .5; } return s / .9375; }`;
+  const finish = (mat, kind, opts = {}) => {
+    const own = {
+      uDisOn: { value: 0 }, uDisP: { value: 0 }, uDisSide: { value: 1 }, uDisColor: { value: new THREE.Color(opts.edge ?? 0xffffff) },
+      uRimColor: { value: new THREE.Color(opts.rim ?? 0xffffff) }, uRimStr: { value: opts.rimStr ?? .4 }, uRimPow: { value: opts.rimPow ?? 3 },
+      uColA: { value: new THREE.Color(opts.a ?? 0x00e5ff) }, uColB: { value: new THREE.Color(opts.b ?? 0xff2bd6) },
+    };
+    mat.userData.u = own;
+    mat.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, shared, own);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uTime; uniform vec4 uPoke; uniform float uPokeAmp; varying vec3 vObj;')
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+          vObj = position;
+          float pokeAge = uTime - uPoke.w;
+          if (pokeAge > 0. && pokeAge < 3.5) {
+            float pd = distance(position, uPoke.xyz);
+            transformed += objectNormal * uPokeAmp * sin(pd * 6.5 - pokeAge * 16.) * exp(-pokeAge * 2.4) * exp(-pd * .6) * smoothstep(0., .06, pokeAge);
+          }`);
+      let fs = sh.fragmentShader
+        .replace('#include <common>', `#include <common>
+          uniform float uTime, uDisOn, uDisP, uDisSide, uRimStr, uRimPow; uniform vec3 uDisColor, uRimColor, uColA, uColB; varying vec3 vObj;
+          ${NOISE}`)
+        .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+          float disGlow = 0.;
+          if (uDisOn > .5) {
+            float de = (snoise(vObj * 1.7) * .5 + .5) - uDisP;
+            if (uDisSide > 0. ? de > 0. : de <= 0.) discard;
+            disGlow = 1. - smoothstep(0., .07, abs(de));
+          }`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          float fres = pow(1. - saturate(dot(normal, normalize(vViewPosition))), uRimPow);
+          totalEmissiveRadiance += uRimColor * fres * uRimStr + uDisColor * disGlow * 6.;
+          ${kind === 'lava' ? `
+          vec3 lavaCol = mix(vec3(1., .19, .02), vec3(1., .72, .24), lavaC);
+          totalEmissiveRadiance += lavaCol * lavaHeat * (1.9 + .6 * sin(uTime * 1.7 + lavaN * 8.));` : ''}
+          ${kind === 'neon' ? `
+          float scan = smoothstep(.86, 1., fract(vObj.y * 6. - uTime * .7));
+          vec3 neonCol = mix(uColA, uColB, smoothstep(-2.2, 2.2, vObj.y + sin(uTime * .5 + vObj.x) * .7));
+          totalEmissiveRadiance += neonCol * (pow(1. - saturate(dot(normal, normalize(vViewPosition))), 2.2) * 3.4 + scan * .55 + .05);` : ''}
+          totalEmissiveRadiance = min(max(vec3(0.), totalEmissiveRadiance), vec3(40.));`);
+      if (kind === 'shiny') fs = fs.replace('#include <color_fragment>', `#include <color_fragment>
+          float holoF = dot(normalize(vNormal), normalize(vViewPosition));
+          vec3 holo = .5 + .5 * cos(6.2832 * (vec3(0., .33, .67) + holoF * 1.3 + vObj.y * .16 + uTime * .04));
+          diffuseColor.rgb *= mix(vec3(1.), holo, .6);`);
+      if (kind === 'lava') fs = fs
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          vec3 lp = vObj * 1.7; float lt = uTime * .09;
+          float lavaN = fbm(lp + vec3(0., -lt, lt * .6));
+          float lavaC = pow(max(1. - abs(snoise(lp * 2.6 + vec3(lt * .8, -lt * 1.6, lt * .3))), 0.), 14.) * smoothstep(.3, .6, lavaN);
+          float lavaHeat = clamp(smoothstep(.62, .98, lavaN) * .55 + lavaC, 0., 1.);
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.025, .01, .006), lavaHeat);`)
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, .45, lavaHeat);');
+      sh.fragmentShader = fs;
+    };
+    mat.customProgramCacheKey = () => 'balling-' + kind;
+    return mat;
+  };
+  const FINISHES = {
+    chrome: { bloom: .3, make: () => finish(new THREE.MeshPhysicalMaterial({ color: 0xf3f6fb, metalness: 1, roughness: .06, envMapIntensity: 1.25 }), 'chrome', { rim: 0x9fdcff, rimStr: .12, edge: 0x9fdcff }) },
+    gold: { bloom: .3, make: () => finish(new THREE.MeshPhysicalMaterial({ color: 0xffc35a, metalness: 1, roughness: .15, envMapIntensity: 1.3, clearcoat: .35, clearcoatRoughness: .08 }), 'gold', { rim: 0xffb347, rimStr: .08, edge: 0xffd27a }) },
+    shiny: { bloom: .32, make: () => finish(new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 1, roughness: .1, iridescence: 1, iridescenceIOR: 1.9, iridescenceThicknessRange: [260, 920], envMapIntensity: 1.35 }), 'shiny', { rim: 0xff7ad9, rimStr: .12, edge: 0xff8ae2 }) },
+    lava: { bloom: .7, make: () => finish(new THREE.MeshStandardMaterial({ color: 0x2b1711, roughness: .88, metalness: 0, envMapIntensity: .45 }), 'lava', { rim: 0xff5a1a, rimStr: .4, rimPow: 2.5, edge: 0xff7a1a }) },
+    glass: { bloom: .3, make: () => finish(new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: .02, transmission: 1, thickness: 1.6, ior: 1.62, dispersion: 6, attenuationColor: 0x9fdcff, attenuationDistance: 1.8, specularIntensity: 1, envMapIntensity: 2.1 }), 'glass', { rim: 0xaee8ff, rimStr: .38, rimPow: 2.4, edge: 0xbfefff }) },
+    obsidian: { bloom: .32, make: () => finish(new THREE.MeshPhysicalMaterial({ color: 0x060608, metalness: 0, roughness: .1, clearcoat: 1, clearcoatRoughness: .03, sheen: 1, sheenRoughness: .35, sheenColor: 0x5a3cff, envMapIntensity: 1.1 }), 'obsidian', { rim: 0x7a5cff, rimStr: .35, edge: 0x9a7cff }) },
+    neon: { bloom: .9, make: () => finish(new THREE.MeshStandardMaterial({ color: 0x07080c, roughness: .35, metalness: .6, envMapIntensity: .6 }), 'neon', { rimStr: 0, edge: 0x00e5ff }) },
+  };
+  const materials = {};
+  const material = name => materials[name] || (materials[name] = FINISHES[name].make());
+
+  // ---------------------------------------------------------------------------
+  // 7. The sculpture: one mesh shown, a second one only while two finishes dissolve.
+  // ---------------------------------------------------------------------------
+  const figure = new THREE.Group();
+  const sculpture = new THREE.Mesh(geometry, material('gold'));
+  sculpture.name = 'Original ASCII silhouette'; sculpture.castShadow = true; sculpture.receiveShadow = true;
+  const ghost = new THREE.Mesh(geometry, material('chrome'));
+  ghost.visible = false; ghost.receiveShadow = true;
+  figure.add(sculpture, ghost); scene.add(figure);
+  let current = 'gold', transition = null;
+  const endTransition = () => {
+    if (!transition) return;
+    transition.from.userData.u.uDisOn.value = 0; transition.to.userData.u.uDisOn.value = 0;
+    ghost.visible = false; transition = null;
+  };
+  const setFinish = name => {
+    if (!Object.hasOwn(FINISHES, name) || (name === current && !transition)) return false;
+    endTransition();
+    if (name === current) return false;
+    const from = material(current), to = material(name);
+    ghost.material = from; sculpture.material = to; ghost.visible = true;
+    from.userData.u.uDisOn.value = 1; from.userData.u.uDisSide.value = -1; from.userData.u.uDisP.value = -.1;
+    to.userData.u.uDisOn.value = 1; to.userData.u.uDisSide.value = 1; to.userData.u.uDisP.value = -.1;
+    from.userData.u.uDisColor.value.copy(to.userData.u.uDisColor.value);
+    transition = { t: 0, from, to };
+    current = name;
+    return true;
+  };
+
+  // ---------------------------------------------------------------------------
+  // 8. Effects.
+  // ---------------------------------------------------------------------------
+  const additive = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
+  const pointsOf = (count, attrs, uniforms, vertexShader, fragmentShader) => {
+    const g = new THREE.BufferGeometry();
+    for (const [name, [itemSize, fn]] of Object.entries(attrs)) {
+      const arr = new Float32Array(count * itemSize);
+      for (let i = 0; i < count; i++) fn(arr, i * itemSize, i);
+      g.setAttribute(name, new THREE.BufferAttribute(arr, itemSize));
+    }
+    const pts = new THREE.Points(g, new THREE.ShaderMaterial({ uniforms: { uTime: shared.uTime, uPx: pxU, uFade: { value: 0 }, ...uniforms }, vertexShader, fragmentShader, ...additive }));
+    pts.frustumCulled = false;
+    return pts;
+  };
+  const sparkles = pointsOf(460, {
+    position: [3, (a, o) => { const r = rand(2.5, 4.6), t = rand(0, Math.PI * 2); a[o] = Math.cos(t) * r; a[o + 1] = rand(-2.3, 2.9); a[o + 2] = Math.sin(t) * r; }],
+    aPhase: [1, (a, o) => { a[o] = Math.random(); }],
+    aSize: [1, (a, o) => { a[o] = rand(5, 13); }],
+  }, { uColA: { value: new THREE.Color(1, .86, .55) }, uColB: { value: new THREE.Color(.75, .9, 1) } },
+  `uniform float uTime, uPx; uniform vec3 uColA, uColB; attribute float aPhase, aSize; varying float vA; varying vec3 vCol;
+   void main(){
+     vec3 p = position; float ang = uTime * (.07 + aPhase * .05); float c = cos(ang), s = sin(ang);
+     p.xz = mat2(c, -s, s, c) * p.xz; p.y += sin(uTime * .6 + aPhase * 6.283) * .15;
+     vec4 mv = modelViewMatrix * vec4(p, 1.);
+     float tw = pow(max(.5 + .5 * sin(uTime * (1.4 + aPhase * 3.) + aPhase * 40.), 0.), 6.);
+     vA = tw; vCol = mix(uColA, uColB, fract(aPhase * 7.31));
+     gl_PointSize = aSize * uPx * (.35 + tw) * (9. / -mv.z);
+     gl_Position = projectionMatrix * mv;
+   }`,
+  `uniform float uFade; varying float vA; varying vec3 vCol;
+   void main(){
+     vec2 q = gl_PointCoord - .5; float d = length(q);
+     float star = max(0., 1. - abs(q.x) * 12.) * max(0., 1. - abs(q.y) * 2.4) + max(0., 1. - abs(q.y) * 12.) * max(0., 1. - abs(q.x) * 2.4);
+     float a = (exp(-d * d * 70.) + star * .55) * vA * uFade;
+     if (a < .003) discard;
+     gl_FragColor = vec4(vCol * 2.4, a);
+   }`);
+  const embers = pointsOf(380, {
+    position: [3, (a, o) => { a[o] = rand(-1, 1); a[o + 1] = rand(-1, 1); a[o + 2] = Math.random(); }],
+    aPhase: [1, (a, o) => { a[o] = Math.random(); }],
+    aSize: [1, (a, o) => { a[o] = rand(3, 8); }],
+  }, {},
+  `uniform float uTime, uPx; attribute float aPhase, aSize; varying float vA, vHeat;
+   void main(){
+     float life = 4.5 + position.z * 4.;
+     float t = mod(uTime + aPhase * life, life) / life;
+     vec3 p = vec3(position.x * 3.1, mix(-2.6, 3.8, t), position.y * 1.6);
+     p.x += sin(t * 9. + aPhase * 20.) * .28 * t; p.z += cos(t * 7. + aPhase * 13.) * .2 * t;
+     vec4 mv = modelViewMatrix * vec4(p, 1.);
+     vA = smoothstep(0., .1, t) * (1. - smoothstep(.55, 1., t)); vHeat = 1. - t;
+     gl_PointSize = aSize * uPx * (9. / -mv.z) * (1. - t * .5);
+     gl_Position = projectionMatrix * mv;
+   }`,
+  `uniform float uFade; varying float vA, vHeat;
+   void main(){
+     float d = length(gl_PointCoord - .5); float a = exp(-d * d * 22.) * vA * uFade;
+     if (a < .003) discard;
+     gl_FragColor = vec4(mix(vec3(1., .16, .02), vec3(1., .78, .32), vHeat) * 3., a);
+   }`);
+  scene.add(sparkles, embers);
+
+  // Impact particles, simulated on the CPU.
+  const BURST = 360, bPos = new Float32Array(BURST * 3), bVel = new Float32Array(BURST * 3), bLife = new Float32Array(BURST), bCol = new Float32Array(BURST * 3);
+  const burstGeo = new THREE.BufferGeometry();
+  burstGeo.setAttribute('position', new THREE.BufferAttribute(bPos, 3).setUsage(THREE.DynamicDrawUsage));
+  burstGeo.setAttribute('aLife', new THREE.BufferAttribute(bLife, 1).setUsage(THREE.DynamicDrawUsage));
+  burstGeo.setAttribute('aColor', new THREE.BufferAttribute(bCol, 3).setUsage(THREE.DynamicDrawUsage));
+  const bursts = new THREE.Points(burstGeo, new THREE.ShaderMaterial({
+    uniforms: { uPx: pxU }, ...additive,
+    vertexShader: `uniform float uPx; attribute float aLife; attribute vec3 aColor; varying float vL; varying vec3 vC;
+      void main(){ vL = aLife; vC = aColor; vec4 mv = modelViewMatrix * vec4(position, 1.); gl_PointSize = aLife > 0. ? uPx * (4. + 7. * aLife) * (9. / -mv.z) : 0.; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying float vL; varying vec3 vC; void main(){ float d = length(gl_PointCoord - .5); float a = exp(-d * d * 30.) * clamp(vL, 0., 1.); if (a < .003) discard; gl_FragColor = vec4(vC * 3., a); }`,
+  }));
+  bursts.frustumCulled = false; scene.add(bursts);
+  let bNext = 0;
+  const tint = new THREE.Color();
+  const burst = (p, count, color, speed = 3) => {
+    tint.set(color);
+    for (let k = 0; k < count; k++) {
+      const i = bNext; bNext = (bNext + 1) % BURST;
+      const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u), v = speed * rand(.35, 1);
+      bPos[i * 3] = p.x; bPos[i * 3 + 1] = p.y; bPos[i * 3 + 2] = p.z;
+      bVel[i * 3] = Math.cos(a) * s * v; bVel[i * 3 + 1] = u * v + 1; bVel[i * 3 + 2] = Math.sin(a) * s * v;
+      bLife[i] = rand(.6, 1.15); bCol[i * 3] = tint.r; bCol[i * 3 + 1] = tint.g; bCol[i * 3 + 2] = tint.b;
+    }
+  };
+
+  // Halo: two orbiting rings with a light riding each one.
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0, ...additive });
+  const halo = new THREE.Group();
+  const ringA = new THREE.Mesh(new THREE.TorusGeometry(2.7, .011, 8, 320), haloMat), ringB = new THREE.Mesh(new THREE.TorusGeometry(3.05, .008, 8, 320), haloMat);
+  ringA.rotation.set(1.25, 0, .28); ringB.rotation.set(1.85, 0, -.35);
+  const orbA = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 12), haloMat), orbB = new THREE.Mesh(new THREE.SphereGeometry(.045, 16, 12), haloMat);
+  ringA.add(orbA); ringB.add(orbB); halo.add(ringA, ringB); scene.add(halo);
+
+  // Stage beams: three sweeping coloured spots with soft visible cones.
+  const beams = [0xff2bd6, 0x00e5ff, 0xffd166].map((color, i) => {
+    const light = new THREE.SpotLight(color, 0, 0, .3, .55, 2);
+    light.position.set([-5.2, 0, 5.2][i], 8.6, [2.8, -3.4, 2.8][i]);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.5, 11, 48, 1, true).translate(0, -5.5, 0), new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(color) }, uFade: { value: 0 } }, side: THREE.DoubleSide, ...additive,
+      vertexShader: 'varying float vV; varying vec3 vN, vView; void main(){ vV = uv.y; vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.); vView = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+      fragmentShader: 'uniform vec3 uColor; uniform float uFade; varying float vV; varying vec3 vN, vView; void main(){ float edge = pow(abs(dot(normalize(vN), normalize(vView))), 2.); float a = pow(clamp(vV, 0., 1.), 2.2) * edge * .2 * uFade; if (a < .002) discard; gl_FragColor = vec4(uColor * 2.2, a); }',
+    }));
+    cone.position.copy(light.position); cone.frustumCulled = false;
+    scene.add(light, light.target, cone);
+    return { light, cone, i };
+  });
+
+  // Shock ring across the podium top on impacts.
+  const pulseU = { uTime: shared.uTime, uT0: { value: -10 }, uColor: { value: new THREE.Color(0x7fd6ff) } };
+  const pulseRing = new THREE.Mesh(new THREE.CircleGeometry(PODIUM_R - .03, 96), new THREE.ShaderMaterial({
+    uniforms: pulseU, ...additive,
+    vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: 'uniform float uTime, uT0; uniform vec3 uColor; varying vec2 vP; void main(){ float age = uTime - uT0; if (age < 0. || age > 2.) discard; float r = length(vP); float ring = exp(-pow((r - age * 2.6) * 7., 2.)) * exp(-age * 2.); if (ring < .003) discard; gl_FragColor = vec4(uColor * 3., ring); }',
+  }));
+  pulseRing.rotation.x = -Math.PI / 2; pulseRing.position.y = PODIUM_TOP + .005;
+  scene.add(pulseRing);
+
+  // ---------------------------------------------------------------------------
+  // 9. Basketballs and physics.
+  // ---------------------------------------------------------------------------
+  const ballTex = (() => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#c4581f'; g.fillRect(0, 0, 512, 256);
+    for (let k = 0; k < 11000; k++) { g.fillStyle = Math.random() < .5 ? 'rgba(40,10,0,.16)' : 'rgba(255,200,150,.10)'; g.fillRect(Math.random() * 512, Math.random() * 256, 1.7, 1.7); }
+    g.strokeStyle = '#1a0c06'; g.lineWidth = 5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(0, 128); g.lineTo(512, 128); g.stroke();
+    for (const x of [0, 256, 512]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
+    for (const [cx, dir] of [[128, 1], [384, -1]]) {
+      g.beginPath();
+      for (let v = 0; v <= 256; v += 4) { const x = cx + dir * Math.sin(v / 256 * Math.PI) * 62; v ? g.lineTo(x, v) : g.moveTo(x, v); }
+      g.stroke();
+    }
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    return tex;
+  })();
+  const MAXB = 48, balls = [], spawnQueue = [];
+  const ballMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 40, 28), new THREE.MeshStandardMaterial({ map: ballTex, bumpMap: ballTex, bumpScale: 1.4, roughness: .66, metalness: 0 }), MAXB);
+  ballMesh.castShadow = ballMesh.receiveShadow = true; ballMesh.count = 0; ballMesh.frustumCulled = false;
+  scene.add(ballMesh);
+  const GRAV = -11;
+  const spawnBall = (p, v) => {
+    if (balls.length >= MAXB) { const old = balls.find(b => !b.dying); if (old) old.dying = 1e-3; else return; }
+    balls.push({ p: p.clone(), v: v.clone(), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(rand(0, 6), rand(0, 6), rand(0, 6))), r: rand(.17, .215), age: 0, rest: 0, dying: 0 });
+  };
+  const dropBalls = count => { for (let k = 0; k < count; k++) spawnQueue.push(k * .05); };
+  const vRel = new THREE.Vector3(), nW = new THREE.Vector3(), arm = new THREE.Vector3(), local = new THREE.Vector3(), invQ = new THREE.Quaternion();
+  const respond = (b, nx, ny, nz, sx, sy, sz, e) => {
+    vRel.set(b.v.x - sx, b.v.y - sy, b.v.z - sz);
+    const vn = vRel.x * nx + vRel.y * ny + vRel.z * nz;
+    if (vn >= 0) return 0;
+    vRel.x -= (1 + e) * vn * nx; vRel.y -= (1 + e) * vn * ny; vRel.z -= (1 + e) * vn * nz;
+    const tn = vRel.x * nx + vRel.y * ny + vRel.z * nz;
+    vRel.x = (vRel.x - tn * nx) * .94 + tn * nx; vRel.y = (vRel.y - tn * ny) * .94 + tn * ny; vRel.z = (vRel.z - tn * nz) * .94 + tn * nz;
+    b.v.set(vRel.x + sx, vRel.y + sy, vRel.z + sz);
+    return -vn;
+  };
+  let lastHitPoke = -10;
+  const stepBalls = hstep => {
+    for (const b of balls) {
+      if (b.dying) continue;
+      b.v.y += GRAV * hstep; b.p.addScaledVector(b.v, hstep); b.age += hstep;
+      if (b.p.y - b.r < FLOOR_Y) {
+        b.p.y = FLOOR_Y + b.r;
+        if (b.v.y < 0) { b.v.y = -b.v.y * .62; if (b.v.y < .35) b.v.y = 0; b.v.x *= .93; b.v.z *= .93; }
+        b.v.x *= Math.exp(-hstep * .9); b.v.z *= Math.exp(-hstep * .9);
+      }
+      const rr = Math.hypot(b.p.x, b.p.z);
+      if (rr > COURT_R - b.r && rr < COURT_R + .5 && b.p.y < FLOOR_Y + b.r + .12) {
+        const nx = -b.p.x / rr, nz = -b.p.z / rr;
+        b.p.x = -nx * (COURT_R - b.r); b.p.z = -nz * (COURT_R - b.r);
+        respond(b, nx, 0, nz, 0, 0, 0, .5);
+      }
+      // Podium: a capped cylinder.
+      const q = Math.hypot(b.p.x, b.p.z);
+      const cx = q > PODIUM_R ? b.p.x * PODIUM_R / q : b.p.x, cz = q > PODIUM_R ? b.p.z * PODIUM_R / q : b.p.z, cy = clamp(b.p.y, FLOOR_Y, PODIUM_TOP);
+      let dx = b.p.x - cx, dy = b.p.y - cy, dz = b.p.z - cz, d = Math.hypot(dx, dy, dz);
+      if (d < b.r) {
+        if (d < 1e-6) { b.p.y = PODIUM_TOP + b.r; dx = 0; dy = 1; dz = 0; } else { dx /= d; dy /= d; dz /= d; b.p.x += dx * (b.r - d); b.p.y += dy * (b.r - d); b.p.z += dz * (b.r - d); }
+        respond(b, dx, dy, dz, 0, 0, 0, .58);
+      }
+      // Sculpture, in its own space.
+      local.copy(b.p).sub(figure.position).applyQuaternion(invQ);
+      if (touch(local.x, local.y, local.z, b.r)) {
+        local.x += contact.nx * contact.push; local.y += contact.ny * contact.push; local.z += contact.nz * contact.push;
+        b.p.copy(local).applyQuaternion(figure.quaternion).add(figure.position);
+        nW.set(contact.nx, contact.ny, contact.nz).applyQuaternion(figure.quaternion);
+        arm.copy(b.p).sub(figure.position);
+        const yawRate = clamp(motion.yawRate, -3, 3), pitchRate = clamp(motion.pitchVel, -2, 2);
+        const impact = respond(b, nW.x, nW.y, nW.z, yawRate * arm.z, -pitchRate * arm.z + motion.liftVel, -yawRate * arm.x + pitchRate * arm.y, .6);
+        if (impact > 2.2 && motion.t - lastHitPoke > .2) {
+          lastHitPoke = motion.t;
+          const hit = local.clone().addScaledVector(new THREE.Vector3(contact.nx, contact.ny, contact.nz), -b.r);
+          shared.uPoke.value.set(hit.x, hit.y, hit.z, motion.t); shared.uPokeAmp.value = Math.min(.045, .009 * impact);
+          motion.yawVel += clamp(arm.x * nW.z - arm.z * nW.x, -2, 2) * impact * .02;
+          burst(b.p, 8, accentHex(), 1.6);
+        }
+      }
+      if (q > 13 || b.age > 30) b.dying = 1e-3;
+      b.rest = b.v.lengthSq() < .06 ? b.rest + hstep : 0;
+      if (b.rest > 4) b.dying = 1e-3;
+    }
+    for (let i = 0; i < balls.length; i++) {
+      const a = balls[i]; if (a.dying) continue;
+      for (let j = i + 1; j < balls.length; j++) {
+        const b = balls[j]; if (b.dying) continue;
+        const dx = b.p.x - a.p.x, dy = b.p.y - a.p.y, dz = b.p.z - a.p.z, rr = a.r + b.r, d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 >= rr * rr || d2 < 1e-10) continue;
+        const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, nz = dz / d, o = (rr - d) * .5;
+        a.p.x -= nx * o; a.p.y -= ny * o; a.p.z -= nz * o; b.p.x += nx * o; b.p.y += ny * o; b.p.z += nz * o;
+        const vn = (b.v.x - a.v.x) * nx + (b.v.y - a.v.y) * ny + (b.v.z - a.v.z) * nz;
+        if (vn < 0) { const J = -1.7 * vn / 2; a.v.x -= nx * J; a.v.y -= ny * J; a.v.z -= nz * J; b.v.x += nx * J; b.v.y += ny * J; b.v.z += nz * J; }
+      }
+    }
+  };
+  const mtx = new THREE.Matrix4(), scl = new THREE.Vector3(), axis = new THREE.Vector3(), dq = new THREE.Quaternion();
+  let simAcc = 0, rainClock = 0;
+  const updateBalls = dt => {
+    for (let k = spawnQueue.length - 1; k >= 0; k--) {
+      spawnQueue[k] -= dt;
+      if (spawnQueue[k] <= 0) { spawnQueue.splice(k, 1); spawnBall(new THREE.Vector3(rand(-2, 2), rand(4.6, 6.4), rand(-.45, .45)), new THREE.Vector3(rand(-.4, .4), rand(-1, 0), rand(-.4, .4))); }
+    }
+    if (effects.balls) { rainClock += dt; if (rainClock > .32) { rainClock = 0; spawnQueue.push(0); } }
+    invQ.copy(figure.quaternion).invert();
+    simAcc = Math.min(simAcc + dt, .1);
+    while (simAcc >= 1 / 120) { simAcc -= 1 / 120; stepBalls(1 / 120); }
+    let n = 0;
+    for (let k = balls.length - 1; k >= 0; k--) { const b = balls[k]; if (b.dying) { b.dying += dt; if (b.dying > .35) balls.splice(k, 1); } }
+    for (const b of balls) {
+      const sp = Math.hypot(b.v.x, b.v.z);
+      if (sp > 1e-3) { axis.set(b.v.z / sp, 0, -b.v.x / sp); dq.setFromAxisAngle(axis, sp * dt / b.r); b.q.premultiply(dq); }
+      const grow = Math.min(1, b.age / .15), shrink = b.dying ? Math.max(0, 1 - b.dying / .35) : 1;
+      scl.setScalar(b.r * grow * shrink);
+      ballMesh.setMatrixAt(n++, mtx.compose(b.p, b.q, scl));
+    }
+    ballMesh.count = n; ballMesh.instanceMatrix.needsUpdate = true;
+  };
+
+  // ---------------------------------------------------------------------------
+  // 10. Looks (lighting presets) and effect state.
+  // ---------------------------------------------------------------------------
+  const LIGHTS = {
+    studio: { top: 0x23262e, bottom: 0x060709, glow: 0x6a7fa8, glowStr: .5, env: 1, envRot: 0, exposure: 1, key: [0xffffff, 3.1], rimA: [0xcfe0ff, 4], rimB: [0xffffff, 2.4], fill: [0xffffff, .5], spot: 0, floor: 0x16181e, accent: 0x7fd6ff },
+    sunset: { top: 0x26122e, bottom: 0x090405, glow: 0xd8552c, glowStr: .26, env: .85, envRot: 1.3, exposure: 1.02, key: [0xffb070, 2.6], rimA: [0xff4f9a, 5.2], rimB: [0x5ac8ff, 3], fill: [0xffd2a8, .45], spot: 0, floor: 0x1b1013, accent: 0xff9a5c },
+    club: { top: 0x0b0922, bottom: 0x020208, glow: 0x6a34e0, glowStr: .42, env: .35, envRot: 2.5, exposure: 1.08, key: [0x9aa4ff, 1.1], rimA: [0x00e5ff, 7.5], rimB: [0xff2bd6, 7.5], fill: [0x4020ff, .35], spot: 0, floor: 0x0c0b19, accent: 0xff2bd6 },
+    noir: { top: 0x0d0d0f, bottom: 0x000000, glow: 0xffffff, glowStr: .12, env: .16, envRot: 0, exposure: 1, key: [0xffffff, .2], rimA: [0xffffff, 1.6], rimB: [0xffffff, 0], fill: [0xffffff, .04], spot: 1, floor: 0x0b0b0b, accent: 0xf2f2f2 },
+  };
+  const COLORS = ['top', 'bottom', 'glow', 'floor', 'accent'], LAMPS = ['key', 'rimA', 'rimB', 'fill'], NUMS = ['glowStr', 'env', 'envRot', 'exposure', 'spot'];
+  const look = {}, lookTarget = {};
+  const loadLook = (dst, preset) => {
+    for (const k of COLORS) (dst[k] ||= new THREE.Color()).set(preset[k]);
+    for (const k of LAMPS) { (dst[k + 'C'] ||= new THREE.Color()).set(preset[k][0]); dst[k + 'I'] = preset[k][1]; }
+    for (const k of NUMS) dst[k] = preset[k];
+  };
+  let lightName = 'studio';
+  loadLook(look, LIGHTS.studio); loadLook(lookTarget, LIGHTS.studio);
+  const accentHex = () => look.accent.getHex();
+  const setLight = name => { if (!Object.hasOwn(LIGHTS, name)) return false; lightName = name; loadLook(lookTarget, LIGHTS[name]); return true; };
+  const lamps = { key, rimA, rimB, fill };
+  const updateLook = dt => {
+    const a = 1 - Math.exp(-dt * 3.2);
+    for (const k of COLORS) look[k].lerp(lookTarget[k], a);
+    for (const k of LAMPS) { look[k + 'C'].lerp(lookTarget[k + 'C'], a); look[k + 'I'] = lerp(look[k + 'I'], lookTarget[k + 'I'], a); lamps[k].color.copy(look[k + 'C']); lamps[k].intensity = look[k + 'I']; }
+    for (const k of NUMS) look[k] = lerp(look[k], lookTarget[k], a);
+    bgU.uTop.value.copy(look.top); bgU.uBottom.value.copy(look.bottom); bgU.uGlow.value.copy(look.glow); bgU.uGlowStr.value = look.glowStr;
+    scene.environmentIntensity = look.env; scene.environmentRotation.y = look.envRot; renderer.toneMappingExposure = look.exposure;
+    spot.intensity = look.spot * 520;
+    floorMat.color.copy(look.floor);
+    rimRingMat.color.copy(look.accent).multiplyScalar(2.6);
+    pulseU.uColor.value.copy(look.accent);
+    haloMat.color.copy(look.accent).multiplyScalar(3);
+  };
+  const effects = { glow: true, sparkles: true, embers: false, halo: false, spots: false, balls: false, film: false };
+  const fade = { sparkles: 0, embers: 0, halo: 0, spots: 0, film: 0 };
+
+  // ---------------------------------------------------------------------------
+  // 11. Camera, post-processing, interaction.
+  // ---------------------------------------------------------------------------
+  const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, .1, 100);
+  const TARGET = new THREE.Vector3(0, -.42, 0);
+  let zoom = 1, zoomNow = 1, baseDist = 12, insets = { top: 0, bottom: 0 }, parX = 0, parY = 0, parXNow = 0, parYNow = 0;
+  const fitDistance = (w, h, top, bottom) => {
+    const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), avail = Math.max(.35, (h - top - bottom) / h);
+    return Math.max(5.35 / (2 * t * .96 * avail), (size.x + .5) / (2 * t * (w / h) * .9));
+  };
+  const placeCamera = (w, h, top, bottom, distance) => {
+    camera.aspect = w / h;
+    const el = .13 + parYNow * .05, az = parXNow * .1;
+    camera.position.set(TARGET.x + distance * Math.sin(az) * Math.cos(el), TARGET.y + distance * Math.sin(el), TARGET.z + distance * Math.cos(az) * Math.cos(el));
+    camera.lookAt(TARGET);
+    const shift = (bottom - top) / 2;
+    if (Math.abs(shift) > .5) camera.setViewOffset(w, h, 0, shift, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+  };
+  const renderTarget = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  const composer = new EffectComposer(renderer, renderTarget);
+  composer.addPass(new RenderPass(scene, camera));
+  // One bad pixel (NaN/Inf) would be smeared over the whole frame by bloom; clear it first.
+  composer.addPass(new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); gl_FragColor = vec4(min(max(vec3(0.), c.rgb), vec3(64.)), 1.); }',
+  }));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .3, .5, 1.0);
+  composer.addPass(bloom);
+  const grade = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uGrain: { value: 0 }, uCA: { value: 0 }, uVig: { value: .3 }, uRes: { value: new THREE.Vector2(1, 1) } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uGrain, uCA, uVig; uniform vec2 uRes; varying vec2 vUv;
+      void main(){
+        vec2 d = vUv - .5; float r2 = dot(d, d); vec2 off = d * uCA * r2 * .05;
+        vec3 c = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+        c *= 1. - uVig * smoothstep(.12, .7, r2 * 1.7);
+        c += (fract(sin(dot(vUv * uRes + uTime * 61.7, vec2(12.9898, 78.233))) * 43758.5453) - .5) * uGrain;
+        gl_FragColor = vec4(max(c, 0.), 1.);
+      }`,
+  });
+  composer.addPass(grade); composer.addPass(new OutputPass());
+  const sizeTo = (w, h, ratio) => {
+    renderer.setPixelRatio(ratio); renderer.setSize(w, h, false);
+    composer.setPixelRatio(ratio); composer.setSize(w, h);
+    grade.uniforms.uRes.value.set(w * ratio, h * ratio);
+    pxU.value = h * ratio / 1000;
+    bgU.uAspect.value = w / h;
+  };
+  const resize = () => {
+    if (fatalErrors) return;
+    sizeTo(innerWidth, innerHeight, dpr);
+    baseDist = fitDistance(innerWidth, innerHeight, insets.top, insets.bottom);
+    placeCamera(innerWidth, innerHeight, insets.top, insets.bottom, baseDist * zoomNow);
+  };
+
+  const motion = { yaw: -.27, yawVel: 0, yawRate: 0, swayPhase: 0, sway: reduced ? 0 : .55, pitch: .04, pitchVel: 0, squash: 0, squashVel: 0, lift: 0, liftVel: 0, t: 0 };
+  let autoSpin = !reduced, auto = false, autoClock = 0, hidden = false, drag = null, pinch = null;
+  const pointers = new Map(), FRONT = -.27, TAU = Math.PI * 2;
+  const pulse = () => { pulseU.uT0.value = motion.t; };
+  const hop = (power = 5.2) => { if (motion.lift < .05) motion.liftVel = power; };
+  const updateMotion = dt => {
+    const m = motion;
+    if (!drag) {
+      m.yawVel *= Math.exp(-dt * 1.15);
+      if (Math.abs(m.yawVel) < .7) { const goal = Math.round((m.yaw - FRONT) / TAU) * TAU + FRONT; m.yawVel += (goal - m.yaw) * 1.6 * dt; }
+      m.pitchVel += (-(m.pitch - .04) * 26 - m.pitchVel * 6) * dt;
+    }
+    m.yaw += m.yawVel * dt; m.pitch = clamp(m.pitch + m.pitchVel * dt, -.75, .75);
+    m.sway = lerp(m.sway, autoSpin && !reduced ? .55 : 0, 1 - Math.exp(-dt * 2));
+    if (autoSpin && !reduced) m.swayPhase += dt * .45;
+    m.yawRate = m.yawVel + Math.cos(m.swayPhase) * .45 * m.sway;
+    m.squashVel += (-m.squash * 170 - m.squashVel * 9) * dt; m.squash += m.squashVel * dt;
+    if (m.lift > 0 || m.liftVel > 0) {
+      m.liftVel += -15 * dt; m.lift += m.liftVel * dt;
+      if (m.lift <= 0) {
+        m.lift = 0;
+        if (m.liftVel < -2) { m.squashVel += -m.liftVel * .55; m.liftVel = -m.liftVel * .32; pulse(); burst(new THREE.Vector3(0, PODIUM_TOP + .1, 0), 26, accentHex(), 2.4); } else m.liftVel = 0;
+      }
+    }
+    figure.position.set(0, REST_Y + (reduced ? 0 : Math.sin(m.t * .9) * .09) + m.lift, 0);
+    figure.rotation.set(m.pitch, m.yaw + Math.sin(m.swayPhase) * m.sway, 0);
+    figure.scale.set(1 + m.squash * .4, 1 - m.squash, 1 + m.squash * .4);
+    figure.updateMatrixWorld(true);
+  };
+
+  const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  const poke = hit => {
+    const p = sculpture.worldToLocal(hit.point.clone());
+    shared.uPoke.value.set(p.x, p.y, p.z, motion.t); shared.uPokeAmp.value = .055;
+    motion.squashVel += 2.6;
+    const r = hit.point.clone().sub(figure.position);
+    motion.yawVel += clamp(r.x, -2.2, 2.2) * 1.7;
+    motion.pitchVel += clamp(r.y, -2, 2) * .8;
+    burst(hit.point, 46, accentHex(), 3.2); pulse();
+  };
+  const throwBall = ray => {
+    const start = ray.origin.clone().addScaledVector(ray.direction, 1.2); start.y -= .25;
+    const tHit = Math.abs(ray.direction.z) > 1e-3 ? (figure.position.z - ray.origin.z) / ray.direction.z : 12;
+    const goal = ray.origin.clone().addScaledVector(ray.direction, clamp(tHit, 2, 30)), T = .72;
+    spawnBall(start, new THREE.Vector3((goal.x - start.x) / T, (goal.y - start.y) / T - .5 * GRAV * T, (goal.z - start.z) / T));
+  };
+  const click = (x, y) => {
+    ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    const hit = raycaster.intersectObject(sculpture, false)[0];
+    if (hit) poke(hit); else throwBall(raycaster.ray);
+  };
+  const el = renderer.domElement;
+  el.addEventListener('pointerdown', e => {
+    if (fatalErrors || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    el.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom }; drag = null; return; }
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, t: performance.now() };
+  });
+  addEventListener('pointermove', e => { parX = e.clientX / innerWidth * 2 - 1; parY = e.clientY / innerHeight * 2 - 1; });
+  el.addEventListener('pointermove', e => {
+    const p = pointers.get(e.pointerId); if (p) { p.x = e.clientX; p.y = e.clientY; }
+    if (pinch && pointers.size === 2) { const [a, b] = [...pointers.values()]; zoom = clamp(pinch.zoom * pinch.d / (Math.hypot(a.x - b.x, a.y - b.y) || 1), .6, 1.7); return; }
+    if (!drag || drag.id !== e.pointerId) return;
+    const now = performance.now(), dts = Math.max((now - drag.t) / 1000, .004), dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
+    if (drag.moved) {
+      motion.yaw += dx * .009; motion.pitch = clamp(motion.pitch + dy * .006, -.75, .75);
+      motion.yawVel = lerp(motion.yawVel, dx * .009 / dts, .5); motion.pitchVel = lerp(motion.pitchVel, dy * .006 / dts, .5);
+    }
+    drag.x = e.clientX; drag.y = e.clientY; drag.t = now;
+  });
+  const release = e => {
+    pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null;
+    if (!drag || drag.id !== e.pointerId) return;
+    if (!drag.moved) click(e.clientX, e.clientY);
+    else { motion.yawVel = clamp(motion.yawVel, -16, 16); motion.pitchVel = clamp(motion.pitchVel, -8, 8); }
+    drag = null;
+  };
+  el.addEventListener('pointerup', release); el.addEventListener('pointercancel', release);
+  el.addEventListener('wheel', e => { if (fatalErrors) return; e.preventDefault(); zoom = clamp(zoom * Math.exp(e.deltaY * .001), .6, 1.7); }, { passive: false });
+  addEventListener('resize', resize);
+  addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey) return; if (e.code === 'Space') e.preventDefault(); send('balling-key', { key: e.key }); });
+
+  // ---------------------------------------------------------------------------
+  // 12. Commands, shuffle, export, status.
+  // ---------------------------------------------------------------------------
+  const RANDOM_FX = ['sparkles', 'embers', 'halo', 'spots', 'film'];
+  const shuffle = () => {
+    const finishName = pick(Object.keys(FINISHES).filter(n => n !== current));
+    const lightPick = Math.random() < .75 ? pick(Object.keys(LIGHTS).filter(n => n !== lightName)) : lightName;
+    for (const k of RANDOM_FX) effects[k] = Math.random() < .36;
+    if (finishName === 'lava') effects.embers = Math.random() < .85;
+    if (finishName === 'neon' || lightPick === 'club') effects.spots = effects.spots || Math.random() < .6;
+    if (!RANDOM_FX.some(k => effects[k])) effects[pick(RANDOM_FX)] = true;
+    effects.glow = Math.random() < .92;
+    setFinish(finishName); setLight(lightPick);
+    hop(); motion.yawVel += pick([-1, 1]) * rand(5, 8);
+    if (Math.random() < .25) dropBalls(6);
+  };
+  const reset = () => {
+    Object.assign(motion, { yaw: FRONT, yawVel: 0, pitch: .04, pitchVel: 0, squash: 0, squashVel: 0, lift: 0, liftVel: 0, swayPhase: 0 });
+    zoom = 1; spawnQueue.length = 0;
+    for (const b of balls) if (!b.dying) b.dying = 1e-3;
+  };
+  const corners = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const inFrame = () => {
+    const b = geometry.boundingBox;
+    let k = 0;
+    for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) {
+      const p = corners[k++].set(x, y, z).applyMatrix4(sculpture.matrixWorld).project(camera);
+      if (Math.abs(p.x) > 1 || Math.abs(p.y) > 1 || Math.abs(p.z) > 1) return false;
     }
     return true;
   };
-  const render=() => {if(fatalErrors)return;sculpture.rotation.set(pitch,baseYaw+Math.sin(phase)*.34+inertia,0);composer.render();};
-  const status=() => {if(fatalErrors)return;send('balling-status',{status:'ready',revision:THREE.REVISION,sourceRows:rows.length,vertices:geometry.attributes.position.count,depth:size.z,inFrame:inFrame(),errors:fatalErrors,spin,yaw:baseYaw+Math.sin(phase)*.34+inertia,pitch,zoom,networkPolicy:'pinned-three-only',contours:shapes.length});};
-  const resize=() => {if(fatalErrors)return;renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(Math.min(devicePixelRatio,2));composer.setSize(innerWidth,innerHeight);fit(innerWidth,innerHeight);render();status();};
-  const pause=() => {spin=false;status();};
-  renderer.domElement.addEventListener('pointerdown',e=>{if(fatalErrors||(e.pointerType==='mouse'&&e.button!==0))return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};lastDragT=performance.now();lastDragYaw=baseYaw;spinVel=0;renderer.domElement.setPointerCapture(e.pointerId);pause();});
-  renderer.domElement.addEventListener('pointermove',e=>{if(fatalErrors||!drag||drag.id!==e.pointerId)return;const now=performance.now(),dt=(now-lastDragT)/1000;baseYaw+=(e.clientX-drag.x)*.008;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-drag.y)*.006,-1.1,1.1);if(dt>0)spinVel=THREE.MathUtils.clamp((baseYaw-lastDragYaw)/Math.max(dt,.008),-14,14);lastDragYaw=baseYaw;lastDragT=now;drag.x=e.clientX;drag.y=e.clientY;render();status();});
-  const endDrag=e=>{if(drag?.id===e.pointerId)drag=null;};
-  renderer.domElement.addEventListener('pointerup',endDrag);renderer.domElement.addEventListener('pointercancel',endDrag);
-  renderer.domElement.addEventListener('wheel',e=>{if(fatalErrors)return;e.preventDefault();zoom=THREE.MathUtils.clamp(zoom*Math.exp(-e.deltaY*.001),.55,1.7);fit(innerWidth,innerHeight);render();status();},{passive:false});
-  addEventListener('resize',resize);
-  const reset=()=>{baseYaw=-.27;pitch=.09;zoom=1;phase=0;inertia=0;spinVel=0;fit(innerWidth,innerHeight);render();status();};
-  const exportPNG=()=>{
+  let fps = 60;
+  const status = () => {
+    if (fatalErrors) return;
+    send('balling-status', {
+      status: 'ready', revision: THREE.REVISION, sourceRows: rows.length, vertices: geometry.attributes.position.count, triangles: geometry.index.count / 3,
+      depth: +size.z.toFixed(3), inFrame: inFrame(), errors: fatalErrors, spin: autoSpin, yaw: +motion.yaw.toFixed(3), pitch: +motion.pitch.toFixed(3), zoom: +zoom.toFixed(3),
+      networkPolicy: 'pinned-three-only', contours: parts, finish: current, light: lightName, effects: { ...effects }, auto, balls: balls.length,
+      fps: Math.round(fps), dpr: renderer.getPixelRatio(), buildMs: buildMs,
+    });
+  };
+  const exportPNG = () => {
     try {
-      const ratio=renderer.getPixelRatio(), dimensions=renderer.getSize(new THREE.Vector2());
-      const framing={left:camera.left,right:camera.right,top:camera.top,bottom:camera.bottom,zoom:camera.zoom};
       let data;
       try {
-        renderer.setPixelRatio(1);renderer.setSize(2048,2048,false);composer.setPixelRatio(1);composer.setSize(2048,2048);fit(2048,2048);render();
-        data=renderer.domElement.toDataURL('image/png');
+        sizeTo(2048, 2048, 1);
+        placeCamera(2048, 2048, 0, 0, fitDistance(2048, 2048, 0, 0) * zoomNow);
+        bgU.uCenter.value.set(.5, .5 + (TARGET.clone().project(camera).y) * .5 + .02);
+        composer.render(0);
+        data = renderer.domElement.toDataURL('image/png');
       } finally {
-        renderer.setPixelRatio(ratio);renderer.setSize(dimensions.x,dimensions.y,false);
-        composer.setPixelRatio(Math.min(devicePixelRatio,2));composer.setSize(dimensions.x,dimensions.y);
-        Object.assign(camera,framing);camera.updateProjectionMatrix();render();
+        resize();
       }
-      send('balling-png',{data,width:2048,height:2048});status();
-    } catch(error){send('balling-export-error',{message:String(error?.message||error||'PNG export failed.').slice(0,200)});}
+      send('balling-png', { data, width: 2048, height: 2048 });
+    } catch (error) { send('balling-export-error', { message: String(error?.message || error || 'PNG export failed.').slice(0, 200) }); }
   };
-  addEventListener('message',e=>{
-    if(fatalErrors||e.source!==parent||e.data?.type!=='balling-command')return;
-    switch(e.data.action){
-      case 'spin':spin=!spin;if(spin){phase=0;}status();break;
-      case 'reset':reset();break;
-      case 'export':exportPNG();break;
-      case 'visibility':hidden=e.data.hidden===true;break;
-      case 'inspect':render();status();break;
+  addEventListener('message', e => {
+    if (fatalErrors || e.source !== parent || e.data?.type !== 'balling-command') return;
+    const { action, value } = e.data;
+    switch (action) {
+      case 'spin': autoSpin = !autoSpin; break;
+      case 'reset': reset(); break;
+      case 'export': exportPNG(); break;
+      case 'visibility': hidden = value === true || e.data.hidden === true; break;
+      case 'finish': setFinish(String(value)); break;
+      case 'next-finish': { const names = Object.keys(FINISHES); setFinish(names[(names.indexOf(current) + 1) % names.length]); break; }
+      case 'light': setLight(String(value)); break;
+      case 'next-light': { const names = Object.keys(LIGHTS); setLight(names[(names.indexOf(lightName) + 1) % names.length]); break; }
+      case 'effect': if (value && typeof value.name === 'string' && Object.hasOwn(effects, value.name)) effects[value.name] = value.on === true; break;
+      case 'shuffle': shuffle(); break;
+      case 'auto': auto = value === true && !reduced; autoClock = 0; break;
+      case 'drop': dropBalls(16); break;
+      case 'insets': insets = { top: clamp(+value?.top || 0, 0, innerHeight * .4), bottom: clamp(+value?.bottom || 0, 0, innerHeight * .5) }; resize(); break;
+      case 'inspect': break;
+      default: return;
     }
+    status();
   });
-  let last=performance.now(),lastReport=0;
-  const animate=now=>{
-    if(fatalErrors)return;
-    animationFrame=requestAnimationFrame(animate);
-    const delta=Math.min((now-last)/1000,.1);last=now;
-    if(hidden)return;
-    const t=now/1000;
-    if(!reduced){
-      sculpture.position.y=HANG_LOW+Math.sin(t*.8)*.18;
-      sculpture.scale.setScalar(1+Math.sin(t*1.3)*.018);
-      particles.rotation.y=t*.12;
-      particles.position.y=Math.sin(t*.6)*.25;
-      pMat.opacity=.55+Math.sin(t*2.0)*.2;
-      wire.material.opacity=.08+(Math.sin(t*1.2)*.5+.5)*.07;
-      if(material.userData.shader)material.userData.shader.uniforms.uRimStrength.value=.85+Math.sin(t*1.6)*.35;
-      camera.position.x+=(mouseX*1.1-camera.position.x)*.05;
-      camera.position.y+=(mouseY*.7-camera.position.y)*.05;
-      camera.lookAt(0,viewOffset,0);
+
+  // ---------------------------------------------------------------------------
+  // 13. Warm up every shader, then run.
+  // ---------------------------------------------------------------------------
+  resize();
+  updateLook(10);
+  {
+    const warm = new THREE.Group();
+    for (const name of Object.keys(FINISHES)) { const w = new THREE.Mesh(geometry, material(name)); w.scale.setScalar(.001); warm.add(w); }
+    scene.add(warm);
+    try { await renderer.compileAsync(scene, camera); } catch { renderer.compile(scene, camera); }
+    scene.remove(warm);
+  }
+  buildMs = Math.round(performance.now() - built);
+  let last = performance.now(), frames = 0, frameTime = 0, slow = 0, quick = 0, lastStatus = 0;
+  const tmpV = new THREE.Vector3();
+  const animate = now => {
+    if (fatalErrors) return;
+    animationFrame = requestAnimationFrame(animate);
+    const dt = Math.min((now - last) / 1000, .1); last = now;
+    if (hidden) return;
+    motion.t += dt; shared.uTime.value = motion.t; grade.uniforms.uTime.value = motion.t;
+    updateLook(dt);
+    updateMotion(dt);
+    updateBalls(dt);
+    // Effect fades.
+    const a = 1 - Math.exp(-dt * 3);
+    for (const k of Object.keys(fade)) fade[k] = lerp(fade[k], effects[k] ? 1 : 0, a);
+    sparkles.material.uniforms.uFade.value = fade.sparkles; sparkles.visible = fade.sparkles > .01;
+    embers.material.uniforms.uFade.value = fade.embers; embers.visible = fade.embers > .01;
+    haloMat.opacity = fade.halo; halo.visible = fade.halo > .01;
+    halo.position.copy(figure.position); ringA.rotation.y = motion.t * .35; ringB.rotation.y = -motion.t * .27;
+    orbA.position.set(Math.cos(motion.t * 1.3) * 2.7, Math.sin(motion.t * 1.3) * 2.7, 0); orbB.position.set(Math.cos(-motion.t * 1.05 + 2) * 3.05, Math.sin(-motion.t * 1.05 + 2) * 3.05, 0);
+    for (const bm of beams) {
+      bm.light.intensity = fade.spots * 340;
+      bm.light.target.position.set(Math.sin(motion.t * .55 + bm.i * 2.1) * 2.3, -1.2, Math.cos(motion.t * .42 + bm.i) * 1.3);
+      bm.light.target.updateMatrixWorld();
+      bm.cone.quaternion.setFromUnitVectors(tmpV.set(0, -1, 0), tmpV.clone().subVectors(bm.light.target.position, bm.light.position).normalize());
+      bm.cone.material.uniforms.uFade.value = fade.spots; bm.cone.visible = fade.spots > .01;
     }
-    if(!drag&&!reduced){inertia+=spinVel*delta;spinVel*=Math.exp(-delta*1.1);}
-    if(spin){phase+=delta*.4;}
-    render();
-    if(now-lastReport>1000){status();lastReport=now;}
+    bloom.strength = lerp(bloom.strength, effects.glow ? FINISHES[current].bloom : 0, a); bloom.enabled = bloom.strength > .01;
+    grade.uniforms.uGrain.value = fade.film * .05; grade.uniforms.uCA.value = fade.film; grade.uniforms.uVig.value = .3 + fade.film * .32;
+    for (let i = 0; i < BURST; i++) if (bLife[i] > 0) {
+      bLife[i] -= dt * 1.1; bVel[i * 3 + 1] -= 4 * dt; const damp = Math.exp(-dt * 1.4);
+      bVel[i * 3] *= damp; bVel[i * 3 + 1] *= damp; bVel[i * 3 + 2] *= damp;
+      bPos[i * 3] += bVel[i * 3] * dt; bPos[i * 3 + 1] += bVel[i * 3 + 1] * dt; bPos[i * 3 + 2] += bVel[i * 3 + 2] * dt;
+    }
+    burstGeo.attributes.position.needsUpdate = true; burstGeo.attributes.aLife.needsUpdate = true; burstGeo.attributes.aColor.needsUpdate = true;
+    if (transition) {
+      transition.t += dt / .95;
+      const p = transition.t >= 1 ? 1 : transition.t * transition.t * (3 - 2 * transition.t), v = lerp(-.1, 1.1, p);
+      transition.from.userData.u.uDisP.value = v; transition.to.userData.u.uDisP.value = v;
+      if (transition.t >= 1) endTransition();
+    }
+    if (auto) { autoClock += dt; if (autoClock > 7) { autoClock = 0; shuffle(); status(); } }
+    // Camera: smooth zoom and a little pointer parallax; the sculpture stays centred.
+    zoomNow = lerp(zoomNow, zoom, 1 - Math.exp(-dt * 6));
+    parXNow = lerp(parXNow, reduced ? 0 : parX, 1 - Math.exp(-dt * 2.5)); parYNow = lerp(parYNow, reduced ? 0 : parY, 1 - Math.exp(-dt * 2.5));
+    placeCamera(innerWidth, innerHeight, insets.top, insets.bottom, baseDist * zoomNow);
+    tmpV.copy(TARGET).project(camera); bgU.uCenter.value.set(tmpV.x * .5 + .5, tmpV.y * .5 + .55);
+    composer.render(dt);
+    // Adaptive resolution keeps the frame rate up on slower machines.
+    frames++; frameTime += dt;
+    if (frameTime >= 1) {
+      fps = frames / frameTime; frames = 0; frameTime = 0;
+      if (fps < 40 && dpr > .8) { if (++slow >= 2) { dpr = Math.max(.75, dpr - .25); resize(); slow = 0; } } else slow = 0;
+      if (fps > 58 && dpr < Math.min(maxDpr, 1.75)) { if (++quick >= 6) { dpr = Math.min(maxDpr, 1.75, dpr + .25); resize(); quick = 0; } } else quick = 0;
+    }
+    if (now - lastStatus > 1000) { lastStatus = now; status(); }
   };
-  reset();if(!fatalErrors)animationFrame=requestAnimationFrame(animate);
-} catch(error) { reportError(error); }
+  status();
+  animationFrame = requestAnimationFrame(animate);
+} catch (error) { reportError(error); }
 </script>
 </template>
 <script>
 (() => {
-  const frame=document.querySelector('#stage'),status=document.querySelector('#status');
-  const spin=document.querySelector('#spin'),reset=document.querySelector('#reset'),save=document.querySelector('#save');
-  const app=window.__BALLING__={status:'loading',errors:0};
-  const command=action=>{if(app.status==='error')return;frame.contentWindow.postMessage({type:'balling-command',action},'*');};
-  const timeout=setTimeout(()=>{if(app.status==='loading'){status.className='error';status.textContent='Three.js could not start. Check your internet connection and WebGL support, then reload.';}},25000);
-  addEventListener('message',event=>{
-    if(app.status==='error'||event.source!==frame.contentWindow||!event.data||typeof event.data!=='object')return;
-    const data=event.data;
-    if(data.type==='balling-status'&&data.status==='ready'){
-      for(const key of ['status','revision','sourceRows','vertices','depth','inFrame','errors','spin','yaw','pitch','zoom','networkPolicy','contours'])if(Object.hasOwn(data,key))app[key]=data[key];
-      clearTimeout(timeout);if(!app.exportError)status.className='ready';[spin,reset,save].forEach(button=>button.disabled=false);spin.textContent=data.spin?'Pause rotation':'Rotate';spin.setAttribute('aria-pressed',String(data.spin));
-    } else if(data.type==='balling-error'){
-      app.status='error';app.errors++;clearTimeout(timeout);status.className='error';status.textContent='Could not render: '+String(data.message||'WebGL unavailable.').slice(0,200);
-      [spin,reset,save].forEach(button=>button.disabled=true);
-    } else if(data.type==='balling-export-error'){
-      app.exportError=String(data.message||'PNG export failed.').slice(0,200);save.disabled=false;save.textContent='Save PNG ↗';
-      status.className='error';status.textContent='Could not save PNG. The viewer is still available; try again.';
-    } else if(data.type==='balling-png'&&typeof data.data==='string'&&data.data.length<16000000&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(data.data)){
-      app.exportError='';status.className='ready';app.lastPNG=data.data;app.lastExport={width:data.width,height:data.height};save.disabled=false;save.textContent='Save PNG ↗';
-      const link=document.createElement('a');link.href=data.data;link.download='still-balling-3d.png';link.click();
-    }
+  const frame = document.querySelector('#stage'), status = document.querySelector('#status'), dock = document.querySelector('.dock'), header = document.querySelector('header');
+  const $ = id => document.getElementById(id);
+  const spin = $('spin'), reset = $('reset'), save = $('save'), shuffle = $('shuffle'), auto = $('auto'), drop = $('drop'), more = $('more');
+  const app = window.__BALLING__ = { status: 'loading', errors: 0 };
+  const controls = [...dock.querySelectorAll('button')].filter(b => b !== more);
+  const command = (action, value) => { if (app.status === 'error' || !frame.contentWindow) return; frame.contentWindow.postMessage({ type: 'balling-command', action, value }, '*'); };
+  const timeout = setTimeout(() => { if (app.status === 'loading') { status.className = 'error'; status.textContent = 'Three.js could not start. Check your internet connection and WebGL support, then reload.'; } }, 25000);
+  const sync = () => {
+    for (const b of dock.querySelectorAll('[data-finish]')) b.setAttribute('aria-checked', String(b.dataset.finish === app.finish));
+    for (const b of dock.querySelectorAll('[data-light]')) b.setAttribute('aria-checked', String(b.dataset.light === app.light));
+    for (const b of dock.querySelectorAll('[data-effect]')) b.setAttribute('aria-pressed', String(!!(app.effects && app.effects[b.dataset.effect])));
+    auto.setAttribute('aria-pressed', String(!!app.auto));
+    spin.textContent = app.spin ? 'Pause' : 'Sway'; spin.setAttribute('aria-pressed', String(!!app.spin));
+  };
+  let insetsSent = '';
+  const sendInsets = () => {
+    if (app.status !== 'ready') return;
+    const top = Math.round(header.getBoundingClientRect().bottom + 6), bottom = Math.round(innerHeight - dock.getBoundingClientRect().top + 6), next = top + ',' + bottom;
+    if (next === insetsSent) return;
+    insetsSent = next; command('insets', { top, bottom });
+  };
+  new ResizeObserver(sendInsets).observe(dock);
+  addEventListener('resize', () => { insetsSent = ''; sendInsets(); });
+  const handleKey = key => {
+    const k = String(key).toLowerCase();
+    if (k === ' ') command('spin'); else if (k === 'r') command('reset'); else if (k === 's') command('shuffle'); else if (k === 'm') command('next-finish');
+    else if (k === 'l') command('next-light'); else if (k === 'b') command('drop'); else if (k === 'a') command('auto', !app.auto);
+  };
+  addEventListener('message', event => {
+    if (app.status === 'error' || event.source !== frame.contentWindow || !event.data || typeof event.data !== 'object') return;
+    const data = event.data;
+    if (data.type === 'balling-status' && data.status === 'ready') {
+      const first = app.status !== 'ready';
+      for (const [k, v] of Object.entries(data)) if (k !== 'type') app[k] = v;
+      clearTimeout(timeout);
+      if (!app.exportError) status.className = 'ready';
+      if (first) { controls.forEach(b => { b.disabled = false; }); sendInsets(); }
+      sync();
+    } else if (data.type === 'balling-error') {
+      app.status = 'error'; app.errors++; clearTimeout(timeout); status.className = 'error';
+      status.textContent = 'Could not render: ' + String(data.message || 'WebGL unavailable.').slice(0, 200);
+      controls.forEach(b => { b.disabled = true; });
+    } else if (data.type === 'balling-export-error') {
+      app.exportError = String(data.message || 'PNG export failed.').slice(0, 200); save.disabled = false; save.textContent = 'Save PNG ↗';
+      status.className = 'error'; status.textContent = 'Could not save PNG. The viewer is still available; try again.';
+    } else if (data.type === 'balling-png' && typeof data.data === 'string' && data.data.length < 24000000 && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(data.data)) {
+      app.exportError = ''; status.className = 'ready'; app.lastPNG = data.data; app.lastExport = { width: data.width, height: data.height };
+      save.disabled = false; save.textContent = 'Save PNG ↗';
+      const link = document.createElement('a'); link.href = data.data; link.download = 'still-balling-3d.png'; link.click();
+    } else if (data.type === 'balling-key') handleKey(data.key);
+    else if (data.type === 'balling-log') { (app.logs ||= []).push(String(data.level) + ': ' + String(data.message).slice(0, 300)); if (app.logs.length > 20) app.logs.shift(); }
   });
-  spin.addEventListener('click',()=>command('spin'));
-  reset.addEventListener('click',()=>command('reset'));
-  save.addEventListener('click',()=>{save.disabled=true;save.textContent='Rendering…';command('export');});
-  addEventListener('keydown',event=>{if(event.target instanceof HTMLButtonElement)return;if(event.code==='Space'){event.preventDefault();command('spin');}else if(event.key.toLowerCase()==='r')command('reset');});
-  document.addEventListener('visibilitychange',()=>frame.contentWindow.postMessage({type:'balling-command',action:'visibility',hidden:document.hidden},'*'));
-  frame.srcdoc=document.querySelector('#scene-source').innerHTML;
+  dock.querySelectorAll('[data-finish]').forEach(b => b.addEventListener('click', () => command('finish', b.dataset.finish)));
+  dock.querySelectorAll('[data-light]').forEach(b => b.addEventListener('click', () => command('light', b.dataset.light)));
+  dock.querySelectorAll('[data-effect]').forEach(b => b.addEventListener('click', () => command('effect', { name: b.dataset.effect, on: b.getAttribute('aria-pressed') !== 'true' })));
+  shuffle.addEventListener('click', () => command('shuffle'));
+  auto.addEventListener('click', () => command('auto', auto.getAttribute('aria-pressed') !== 'true'));
+  drop.addEventListener('click', () => command('drop'));
+  spin.addEventListener('click', () => command('spin'));
+  reset.addEventListener('click', () => command('reset'));
+  save.addEventListener('click', () => { save.disabled = true; save.textContent = 'Rendering…'; command('export'); });
+  more.addEventListener('click', () => {
+    const open = more.getAttribute('aria-expanded') !== 'true';
+    more.setAttribute('aria-expanded', String(open)); dock.classList.toggle('collapsed', !open); more.textContent = open ? 'Hide controls' : 'Show controls';
+  });
+  addEventListener('keydown', event => {
+    if (event.target instanceof HTMLButtonElement || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.code === 'Space') event.preventDefault();
+    handleKey(event.key);
+  });
+  document.addEventListener('visibilitychange', () => { if (frame.contentWindow) frame.contentWindow.postMessage({ type: 'balling-command', action: 'visibility', value: document.hidden, hidden: document.hidden }, '*'); });
+  frame.srcdoc = document.querySelector('#scene-source').innerHTML;
 })();
 </script>
 </body>
